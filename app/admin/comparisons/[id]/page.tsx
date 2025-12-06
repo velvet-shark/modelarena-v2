@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { VideoRetryButton } from "@/components/video-retry-button";
+import { ComparisonEditForm } from "@/components/comparison-edit-form";
 import Link from "next/link";
 
 interface ComparisonPageProps {
@@ -11,25 +12,30 @@ interface ComparisonPageProps {
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { id } = await params;
 
-  const comparison = await prisma.comparison.findUnique({
-    where: { id },
-    include: {
-      sourceImage: true,
-      videos: {
-        include: {
-          model: {
-            include: {
-              provider: true,
+  const [comparison, allTags] = await Promise.all([
+    prisma.comparison.findUnique({
+      where: { id },
+      include: {
+        sourceImage: true,
+        videos: {
+          include: {
+            model: {
+              include: {
+                provider: true,
+              },
             },
           },
+          orderBy: {
+            createdAt: "asc",
+          },
         },
-        orderBy: {
-          createdAt: "asc",
-        },
+        tags: true,
       },
-      tags: true,
-    },
-  });
+    }),
+    prisma.tag.findMany({
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   if (!comparison) {
     notFound();
@@ -58,6 +64,9 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           </Button>
         </div>
       </div>
+
+      {/* Edit Form */}
+      <ComparisonEditForm comparison={comparison} availableTags={allTags} />
 
       {comparison.description && (
         <div className="border rounded-lg p-4">

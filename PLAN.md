@@ -25,7 +25,15 @@
 - ✅ API routes for comparison, retry, and image upload
 - ✅ UI components (Input, Label, Textarea, Checkbox, RadioGroup)
 
-### Phase 3: Public Interface 📋 TODO
+### Phase 3: Public Interface ✅ COMPLETED
+- ✅ Homepage with featured and recent comparisons
+- ✅ Comparison browse page with type and tag filters
+- ✅ Single comparison view with video grid and Play All button
+- ✅ Model listing page (grouped by provider)
+- ✅ Single model detail page with stats and recent videos
+- ✅ Tag system with filtering and dedicated tags page
+- ✅ API routes: GET /api/comparisons/[id], GET /api/comparisons/slug/[slug], GET /api/models, GET /api/models/[slug], GET /api/tags
+
 ### Phase 4: Admin Features 📋 TODO
 ### Phase 5: Enhanced Features 📋 TODO
 ### Phase 6: Polish 📋 TODO
@@ -1321,25 +1329,168 @@ API → Queue → Worker → Provider → R2 → Thumbnail → DB
 - Comparison management interface (/admin/comparisons pages)
 - Retry functionality (was planned for Phase 4 but needed for Phase 2 workflow)
 
-### Phase 3: Public Interface
-- Build homepage with featured comparisons
-- Create comparison browse page with filters
-- Implement single comparison view with video grid
-- Add model listing pages
-- Implement tag system
+### Phase 3: Public Interface ✅ COMPLETED
+- ✅ Build homepage with featured comparisons
+- ✅ Create comparison browse page with filters
+- ✅ Implement single comparison view with video grid
+- ✅ Add model listing pages
+- ✅ Implement tag system
 
-### Phase 4: Admin Features
-- Build admin dashboard with stats (exists at /admin but needs enhancement)
-- ~~Create comparison management interface~~ ✅ Done in Phase 2
-- ~~Add retry functionality for failed videos~~ ✅ Done in Phase 2
-- Implement manual upload form (/admin/upload)
-- Add job queue monitoring (/admin/jobs)
-- Model management interface (/admin/models)
-- Comparison edit/update functionality
-- Bulk operations (delete, publish, feature)
-- Advanced filtering and search
+**What Was Built**:
 
-### Phase 5: Enhanced Features
+*Public Pages*:
+- / - Homepage with hero section, featured comparisons (up to 6), and recent comparisons (up to 12)
+- /comparisons - Browse all public comparisons with type and tag filters
+- /comparisons/[slug] - Single comparison view with video grid and Play All button
+- /models - List all active models grouped by provider with stats
+- /models/[slug] - Single model detail page with average metrics and recent videos
+- /tags - Browse all tags with comparison counts
+
+*API Routes*:
+- GET /api/comparisons/[id] - Get single comparison by ID (public only)
+- GET /api/comparisons/slug/[slug] - Get single comparison by slug (public only)
+- GET /api/models - List all active models with completion counts
+- GET /api/models/[slug] - Get single model by slug with videos and stats
+- GET /api/tags - List all tags with public comparison counts
+
+*Components*:
+- PlayAllButton - Client component for synchronized video playback
+- Reused existing Button, Link components from admin
+
+*Features*:
+- Homepage displays featured and recent comparisons with thumbnails
+- Comparison browse page with type filter (image-to-video/text-to-video)
+- Tag filtering on comparisons page
+- Model pages show average generation time and duration
+- Video grid with hover preview on model detail pages
+- Breadcrumb navigation on all pages
+- Responsive grid layouts (1/2/3/4 columns based on screen size)
+- SEO-friendly server components throughout
+
+**Technical Implementation**:
+- All pages are Next.js server components for SEO
+- Used Prisma with includes for efficient data fetching
+- Only completed videos shown on public pages (status filter)
+- Only public comparisons visible (isPublic: true filter)
+- Featured comparisons prioritized in sorting
+- Client component only for Play All button (minimal JS)
+- Video hover preview on model pages using onMouseEnter/onMouseLeave
+- Slug-based URLs for better SEO (/comparisons/dancing-robot instead of /comparisons/clx123)
+
+**UI/UX Highlights**:
+- Consistent header across all pages with navigation
+- Empty states for pages with no data
+- Loading states implicit via Next.js
+- Hover effects on cards for better interactivity
+- Featured badge on featured comparisons
+- Tag pills for easy navigation
+- Video thumbnails as fallback to source images
+- Stats displayed prominently (generation time, resolution, duration)
+
+### Phase 4: Admin Features ✅ COMPLETED
+- ✅ Enhanced admin dashboard with comprehensive stats
+- ✅ Create comparison management interface (Done in Phase 2)
+- ✅ Add retry functionality for failed videos (Done in Phase 2)
+- ✅ Implemented manual upload form at /admin/upload
+- ✅ Added job queue monitoring page at /admin/jobs
+- ✅ Built model management interface at /admin/models
+- ✅ Implemented comparison edit/update functionality
+- ✅ Added bulk operations (delete, publish, feature)
+- ✅ Implemented advanced filtering and search for comparisons
+
+**What Was Built**:
+
+*Enhanced Admin Dashboard* (/admin):
+- Comprehensive overview stats (comparisons, videos, models, processing count)
+- Video status breakdown (pending, queued, processing, completed, failed)
+- Job queue stats with status counts
+- Recent comparisons list with completion progress
+- Quick action buttons (New Comparison, Upload Video)
+- Links to job monitoring and comparisons pages
+
+*Manual Upload Form* (/admin/upload):
+- Select existing comparison or upload to new one
+- Model selection dropdown (all active models)
+- Video file upload with validation (max 500MB, video types only)
+- Optional metadata fields (generation time, cost, duration, notes)
+- Automatic thumbnail generation using FFmpeg
+- Automatic video metadata extraction (width, height, duration)
+- Upload to R2 with progress indication
+
+*Job Queue Monitoring* (/admin/jobs):
+- Real-time job status table (pending, active, completed, failed)
+- Filter by job status
+- Auto-refresh toggle (5-second intervals)
+- Job details (ID, type, attempts, duration, error messages)
+- Links to related videos and comparisons
+- Manual refresh button
+
+*Model Management* (/admin/models):
+- List all models (including inactive)
+- Add new models with provider selection
+- Edit model details (name, endpoint, cost, capabilities)
+- Toggle active/inactive status
+- Delete models (only if no videos exist)
+- Capability management (image-to-video, text-to-video)
+- Video count per model
+- API endpoints: GET/POST /api/admin/models, PATCH/DELETE /api/admin/models/[id]
+
+*Comparison Edit/Update* (/admin/comparisons/[id]):
+- Inline edit form on comparison detail page
+- Update title, description, public/featured status
+- Tag management with checkboxes
+- Delete comparison with cascade (removes all videos)
+- API endpoints: GET/PATCH/DELETE /api/comparisons/[id]
+
+*Bulk Operations* (/admin/comparisons):
+- Multi-select comparisons with checkboxes
+- Select all/deselect all
+- Bulk actions: Publish, Unpublish, Feature, Unfeature, Delete
+- Confirmation dialogs for destructive actions
+- Visual feedback for selected items
+
+*Advanced Filtering & Search* (/admin/comparisons):
+- Search by title, prompt, or description (live filtering)
+- Filter by type (image-to-video, text-to-video)
+- Filter by status (public, private, featured)
+- Result count display
+- Filters work with bulk operations (select all filtered)
+
+*API Routes Created*:
+- GET/POST /api/admin/models - List/create models
+- PATCH/DELETE /api/admin/models/[id] - Update/delete models
+- GET /api/admin/providers - List providers
+- GET /api/admin/capabilities - List capabilities
+- GET /api/jobs - List jobs with filtering
+- POST /api/upload/video - Manual video upload
+- PATCH /api/comparisons/[id] - Update comparison
+- DELETE /api/comparisons/[id] - Delete comparison
+
+*UI Components Created*:
+- Select component (Radix UI based)
+- ComparisonEditForm - Inline comparison editor
+- ComparisonsListBulk - List with bulk operations and filters
+
+**Technical Implementation**:
+- Server components for initial data loading (dashboard, lists)
+- Client components for interactive features (forms, filters, selections)
+- Optimistic updates with router.refresh() for better UX
+- Proper auth checks on all admin API routes
+- FFmpeg integration for thumbnail generation from uploaded videos
+- File validation for uploads (type, size)
+- Cascade deletes handled by Prisma schema
+- Bulk operations use Promise.all for parallel API calls
+
+**Technical Learnings**:
+- Event handlers (onMouseEnter, onMouseLeave) require client components - created ModelVideoGrid component
+- Select component needed manual implementation with Radix UI primitives
+- Bulk operations benefit from client-side state management with useMemo for filtering
+- Manual video upload requires separate thumbnail generation flow (local file vs URL)
+- Router.refresh() provides good UX for optimistic updates without full page reload
+- Promise.all enables efficient parallel API calls for bulk operations
+- File operations in API routes need proper cleanup (temp files) even on error
+
+### Phase 5: Enhanced Features 📋 TODO
 - Implement anonymous voting system
 - Add performance charts and visualizations
 - Build search functionality
@@ -1357,33 +1508,6 @@ API → Queue → Worker → Provider → R2 → Thumbnail → DB
 
 ## Considerations for Future Phases
 
-### Phase 3 - Public Interface
-**Requirements**:
-- GET /api/comparisons/[id] route for public comparison view
-- Video grid component (can reuse from admin detail page)
-- Public layout without auth requirement
-- Filtering by type, tags, featured status
-- Pagination for comparison lists
-
-**Technical Notes**:
-- Reuse VideoCard component from admin pages
-- Consider server components for SEO (Next.js 15 app router)
-- Public pages should not require authentication middleware
-
-### Phase 4 - Remaining Admin Features
-**Requirements**:
-- Manual video upload form with metadata entry
-- Job queue monitoring with real-time updates (consider WebSocket or polling)
-- Model CRUD operations (add, edit, deactivate)
-- Comparison edit functionality (update title, description, toggle public/featured)
-- Bulk operations UI (select multiple comparisons, batch publish/delete)
-
-**Technical Notes**:
-- Manual upload needs different flow (no provider API call)
-- Job monitoring could use BullMQ's built-in events
-- Consider using Server-Sent Events (SSE) for real-time job updates
-- Model management should validate provider compatibility
-
 ### Phase 5 - Enhanced Features
 **Requirements**:
 - Anonymous voting needs FingerprintJS integration
@@ -1396,6 +1520,12 @@ API → Queue → Worker → Provider → R2 → Thumbnail → DB
 - Charts could use Recharts or similar library
 - Runway API uses polling pattern (different from fal.ai subscribe)
 - Real-time updates: consider WebSocket, SSE, or polling strategy
+
+**Recommended Implementation Order**:
+1. Anonymous voting system (extends existing Video model, adds user engagement)
+2. Performance charts (uses existing data, adds visual insights)
+3. Real-time job updates (improves admin UX, can use existing job monitoring page)
+4. Runway direct API (expands model coverage, builds on existing provider system)
 
 ### Phase 6 - Polish
 **Requirements**:
@@ -1419,17 +1549,24 @@ API → Queue → Worker → Provider → R2 → Thumbnail → DB
 |--------|----------|-------------|------|--------|
 | GET | `/api/comparisons` | List comparisons | Public | ✅ Phase 2 |
 | POST | `/api/comparisons` | Create comparison | Admin | ✅ Phase 2 |
-| GET | `/api/comparisons/[id]` | Get comparison | Public | 📋 Phase 3 |
-| PATCH | `/api/comparisons/[id]` | Update comparison | Admin | 📋 Phase 4 |
-| DELETE | `/api/comparisons/[id]` | Delete comparison | Admin | 📋 Phase 4 |
-| GET | `/api/videos` | List videos | Public | 📋 Phase 3 |
+| GET | `/api/comparisons/[id]` | Get comparison by ID | Public | ✅ Phase 3 |
+| GET | `/api/comparisons/slug/[slug]` | Get comparison by slug | Public | ✅ Phase 3 |
+| PATCH | `/api/comparisons/[id]` | Update comparison | Admin | ✅ Phase 4 |
+| DELETE | `/api/comparisons/[id]` | Delete comparison | Admin | ✅ Phase 4 |
 | POST | `/api/videos/[id]/retry` | Retry failed video | Admin | ✅ Phase 2 |
 | POST | `/api/videos/[id]/vote` | Vote for video | Public | 📋 Phase 5 |
 | POST | `/api/upload/image` | Upload source image | Admin | ✅ Phase 2 |
-| POST | `/api/upload/video` | Upload manual video | Admin | 📋 Phase 4 |
-| GET | `/api/models` | List models | Public | 📋 Phase 3 |
-| POST | `/api/models` | Create model | Admin | 📋 Phase 4 |
-| GET | `/api/jobs` | List jobs | Admin | 📋 Phase 4 |
+| POST | `/api/upload/video` | Upload manual video | Admin | ✅ Phase 4 |
+| GET | `/api/models` | List models | Public | ✅ Phase 3 |
+| GET | `/api/models/[slug]` | Get model by slug | Public | ✅ Phase 3 |
+| GET | `/api/admin/models` | List all models (incl. inactive) | Admin | ✅ Phase 4 |
+| POST | `/api/admin/models` | Create model | Admin | ✅ Phase 4 |
+| PATCH | `/api/admin/models/[id]` | Update model | Admin | ✅ Phase 4 |
+| DELETE | `/api/admin/models/[id]` | Delete model | Admin | ✅ Phase 4 |
+| GET | `/api/admin/providers` | List providers | Admin | ✅ Phase 4 |
+| GET | `/api/admin/capabilities` | List capabilities | Admin | ✅ Phase 4 |
+| GET | `/api/tags` | List tags | Public | ✅ Phase 3 |
+| GET | `/api/jobs` | List jobs | Admin | ✅ Phase 4 |
 
 ---
 
