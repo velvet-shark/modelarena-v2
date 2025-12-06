@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import type { PricingConfig } from "../src/lib/pricing/types";
 
 const prisma = new PrismaClient();
 
@@ -58,6 +59,14 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/kling-video/v2.5-turbo/standard/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "base-plus-per-second",
+          basePrice: 0.21,
+          baseDuration: 5,
+          pricePerExtraSecond: 0.042,
+        } as PricingConfig,
+      },
     },
     {
       slug: "kling-2.5-turbo-pro",
@@ -65,6 +74,14 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "base-plus-per-second",
+          basePrice: 0.35,
+          baseDuration: 5,
+          pricePerExtraSecond: 0.07,
+        } as PricingConfig,
+      },
     },
     {
       slug: "kling-o1",
@@ -72,6 +89,12 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/kling-video/o1/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.112,
+        } as PricingConfig,
+      },
     },
     // Runway
     {
@@ -80,6 +103,12 @@ async function main() {
       provider: runwayProvider,
       endpoint: "gen4_turbo",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.05,
+        } as PricingConfig,
+      },
     },
     // Veo
     {
@@ -88,6 +117,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/reference-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.15,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "veo-3.1-fast",
@@ -95,6 +131,15 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/fast/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: {
+            withoutAudio: 0.1,
+            withAudio: 0.15,
+          },
+        } as PricingConfig,
+      },
     },
     {
       slug: "veo-3.1",
@@ -102,6 +147,16 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: {
+            withoutAudio: 0.2,
+            withAudio: 0.4,
+          },
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     // Sora
     {
@@ -110,6 +165,16 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/sora-2/image-to-video/pro",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "resolution-dependent",
+          pricingType: "per-second",
+          tiers: [
+            { maxWidth: 1280, maxHeight: 720, price: 0.3 },
+            { maxWidth: 1920, maxHeight: 1080, price: 0.5 },
+          ],
+        } as PricingConfig,
+      },
     },
     {
       slug: "sora-2",
@@ -117,6 +182,12 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/sora-2/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.1,
+        } as PricingConfig,
+      },
     },
     // Hailuo / MiniMax
     {
@@ -125,6 +196,12 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3/pro/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.49,
+        } as PricingConfig,
+      },
     },
     {
       slug: "hailuo-2.3-standard",
@@ -132,6 +209,12 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3/standard/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.28,
+        } as PricingConfig,
+      },
     },
     {
       slug: "hailuo-2.3-fast-standard",
@@ -139,6 +222,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3-fast/standard/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.28,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "hailuo-2.3-fast-pro",
@@ -146,6 +236,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3-fast/pro/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.49,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     // Wan
     {
@@ -154,6 +251,17 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/wan-25-preview/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "resolution-dependent",
+          pricingType: "per-second",
+          tiers: [
+            { maxWidth: 854, maxHeight: 480, price: 0.05 },
+            { maxWidth: 1280, maxHeight: 720, price: 0.1 },
+            { maxWidth: 1920, maxHeight: 1080, price: 0.15 },
+          ],
+        } as PricingConfig,
+      },
     },
     // Seedance
     {
@@ -162,6 +270,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/bytedance/seedance/v1/pro/fast/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.08,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     // Vidu
     {
@@ -170,6 +285,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/image-to-video/turbo",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.08,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "vidu-q2-pro",
@@ -177,6 +299,15 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/image-to-video/pro",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "base-plus-per-second",
+          basePrice: 0.3,
+          baseDuration: 0,
+          pricePerExtraSecond: 0.1,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "vidu-q2-reference",
@@ -184,6 +315,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/reference-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "per-second",
+          pricePerSecond: 0.1,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     // Luma
     {
@@ -192,6 +330,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/luma-dream-machine/ray-2-flash/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.25,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "luma-ray-2",
@@ -199,6 +344,12 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/luma-dream-machine/ray-2/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.5,
+        } as PricingConfig,
+      },
     },
     {
       slug: "luma-ray-3",
@@ -206,6 +357,13 @@ async function main() {
       provider: manualProvider,
       endpoint: null,
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.5,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     // Pika
     {
@@ -214,6 +372,16 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/pika/v2.2/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "resolution-dependent",
+          pricingType: "flat-rate",
+          tiers: [
+            { maxWidth: 1280, maxHeight: 720, price: 0.2 },
+            { maxWidth: 1920, maxHeight: 1080, price: 0.45 },
+          ],
+        } as PricingConfig,
+      },
     },
     {
       slug: "pika-2-turbo",
@@ -221,6 +389,13 @@ async function main() {
       provider: falProvider,
       endpoint: "fal-ai/pika/v2/turbo/image-to-video",
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.15,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
     {
       slug: "pika-2.5",
@@ -228,18 +403,28 @@ async function main() {
       provider: manualProvider,
       endpoint: null,
       capabilities: [imageToVideo],
+      defaultParams: {
+        pricing: {
+          model: "flat-rate",
+          price: 0.5,
+          isEstimated: true,
+        } as PricingConfig,
+      },
     },
   ];
 
   for (const model of models) {
     await prisma.model.upsert({
       where: { slug: model.slug },
-      update: {},
+      update: {
+        defaultParams: model.defaultParams,
+      },
       create: {
         slug: model.slug,
         name: model.name,
         providerId: model.provider.id,
         endpoint: model.endpoint,
+        defaultParams: model.defaultParams,
         capabilities: {
           connect: model.capabilities.map((c) => ({ id: c.id })),
         },

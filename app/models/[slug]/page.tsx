@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ModelVideoGrid } from "@/components/model-video-grid";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { formatCost } from "@/src/lib/format-cost";
 
 interface ModelPageProps {
   params: Promise<{ slug: string }>;
@@ -65,6 +66,13 @@ export default async function ModelPage({ params }: ModelPageProps) {
     completedVideos.length > 0
       ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) /
         completedVideos.length
+      : null;
+
+  const videosWithCost = model.videos.filter((v) => v.cost !== null);
+  const avgCost =
+    videosWithCost.length > 0
+      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) /
+        videosWithCost.length
       : null;
 
   return (
@@ -164,6 +172,12 @@ export default async function ModelPage({ params }: ModelPageProps) {
             <div className="border rounded-lg p-4">
               <div className="text-sm text-muted-foreground">Avg Duration</div>
               <div className="text-2xl font-bold">{avgDuration.toFixed(1)}s</div>
+            </div>
+          )}
+          {avgCost !== null && (
+            <div className="border rounded-lg p-4">
+              <div className="text-sm text-muted-foreground">Avg Cost</div>
+              <div className="text-2xl font-bold">{formatCost(avgCost)}</div>
             </div>
           )}
         </div>

@@ -20,7 +20,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, endpoint, isActive, costPerSecond, capabilityIds } = body;
+    const { name, endpoint, isActive, costPerSecond, capabilityIds, defaultParams } = body;
 
     // Build update data
     const updateData: any = {};
@@ -29,6 +29,7 @@ export async function PATCH(
     if (isActive !== undefined) updateData.isActive = isActive;
     if (costPerSecond !== undefined)
       updateData.costPerSecond = costPerSecond ? parseFloat(costPerSecond) : null;
+    if (defaultParams !== undefined) updateData.defaultParams = defaultParams;
 
     // Handle capabilities update
     if (capabilityIds !== undefined) {

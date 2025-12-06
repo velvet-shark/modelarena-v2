@@ -7,6 +7,7 @@
 - 🎬 **Multi-Model Comparison**: Run the same prompt across 20+ AI video models simultaneously
 - 🖼️ **Image-to-Video & Text-to-Video**: Support for both generation types
 - ⚡ **Queue-Based Processing**: Reliable job processing with BullMQ and Redis
+- 💰 **Automated Cost Tracking**: Intelligent cost calculation with 4 pricing models (per-second, base+per-second, flat-rate, resolution-dependent)
 - 📊 **Analytics Dashboard**: Track performance metrics, generation times, and costs
 - 🗳️ **Anonymous Voting**: Community-driven quality assessment with fingerprint-based voting
 - 🎯 **Model Leaderboards**: See which models perform best across different metrics
@@ -188,6 +189,40 @@ For models without API access (e.g., Luma Ray 3, Pika 2.5):
 - **Health Check**: `GET /api/health` returns system status
 - **Analytics**: Public analytics at `/analytics`
 
+### Cost Tracking
+
+ModelArena includes comprehensive automated cost tracking:
+
+**Pricing Models Supported**:
+1. **Per-Second**: Cost = duration × rate (with optional audio variants)
+2. **Base + Per-Second**: Cost = basePrice + (extraSeconds × rate)
+3. **Flat-Rate**: Fixed cost per generation
+4. **Resolution-Dependent**: Different pricing tiers based on video resolution
+
+**How It Works**:
+- Worker automatically calculates costs after video generation
+- Uses actual video metadata (duration, width, height)
+- Pricing configured in admin panel (`/admin/models`)
+- Manual cost override available for individual videos
+- Costs displayed on public comparison and model pages
+
+**Cost Display Format**:
+- Intelligent formatting: $0.5512, $0.881, $0.35, $0.70
+- Always shows at least 2 decimals
+- Shows 3rd/4th decimals only if non-zero
+
+**Managing Pricing**:
+1. Navigate to `/admin/models`
+2. Edit model and expand "Pricing Configuration"
+3. Select pricing model type
+4. Configure pricing parameters
+5. Mark as "estimated" if pricing is approximate
+
+**Manual Cost Entry**:
+- Click on cost value in admin comparison view to edit
+- Useful for outdated pricing or manual uploads
+- Available at `/admin/comparisons/[id]`
+
 ## API Reference
 
 ### Public Endpoints
@@ -211,6 +246,7 @@ For models without API access (e.g., Luma Ray 3, Pika 2.5):
 | `/api/comparisons`       | POST   | Create comparison            |
 | `/api/comparisons/[id]`  | PATCH  | Update comparison            |
 | `/api/comparisons/[id]`  | DELETE | Delete comparison            |
+| `/api/videos/[id]`       | PATCH  | Update video (cost override) |
 | `/api/videos/[id]/retry` | POST   | Retry failed generation      |
 | `/api/upload/image`      | POST   | Upload source image          |
 | `/api/upload/video`      | POST   | Manual video upload          |

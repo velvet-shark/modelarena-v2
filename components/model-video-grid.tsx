@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { VoteButton } from "@/components/vote-button";
+import { formatCost } from "@/src/lib/format-cost";
 
 interface Video {
   id: string;
@@ -11,6 +12,7 @@ interface Video {
   duration: number | null;
   width: number | null;
   height: number | null;
+  cost: number | null;
   voteCount: number;
   comparison: {
     slug: string;
@@ -81,6 +83,11 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
               {video.width && video.height && (
                 <span title="Resolution">
                   📐 {video.width}×{video.height}
+                </span>
+              )}
+              {video.cost !== null && (
+                <span title="Generation cost">
+                  💵 {formatCost(video.cost)}
                 </span>
               )}
             </div>

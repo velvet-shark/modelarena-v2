@@ -1689,6 +1689,151 @@ API → Queue → Worker → Provider → R2 → Thumbnail → DB
 
 ---
 
+## Automated Cost Calculation System ✅ COMPLETED
+
+### Overview
+
+Comprehensive cost tracking system that automatically calculates video generation costs based on configurable pricing models. Supports 4 pricing structures with intelligent cost formatting.
+
+### Pricing Models Supported
+
+1. **Per-Second Pricing**
+   - Cost = duration × pricePerSecond
+   - Optional audio variants (different pricing with/without audio)
+   - Example: Veo 3.1 Fast ($0.10/s no audio, $0.15/s with audio)
+
+2. **Base + Per-Second Pricing**
+   - Cost = basePrice + (extraSeconds × pricePerExtraSecond)
+   - Includes base duration covered by basePrice
+   - Example: Kling 2.5 Turbo Standard ($0.21 base for 5s + $0.042/s extra)
+
+3. **Flat-Rate Pricing**
+   - Cost = fixed price (regardless of duration)
+   - Example: Hailuo 2.3 Pro ($0.49 per generation)
+
+4. **Resolution-Dependent Pricing**
+   - Cost varies by video resolution tier
+   - Can be per-second or flat-rate within each tier
+   - Example: Sora 2 Pro ($0.30/s at 720p, $0.50/s at 1080p)
+
+### Implementation Architecture
+
+**Storage Location**: `Model.defaultParams.pricing` (JSON field)
+
+**Fallback**: `Model.costPerSecond` for simple models during migration
+
+**Cost Calculation Flow**:
+1. Worker completes video generation
+2. Fetches Model record with pricing config
+3. Calls CostCalculator with video metrics (duration, resolution, audio)
+4. Saves calculated cost to Video.cost field
+
+### Files Created
+
+**Core Pricing System**:
+- `src/lib/pricing/types.ts` - TypeScript interfaces for all pricing models
+- `src/lib/pricing/calculator.ts` - CostCalculator class with calculation logic
+- `src/lib/pricing/validation.ts` - Zod schemas for runtime validation
+- `src/lib/pricing/index.ts` - Barrel export
+- `src/lib/format-cost.ts` - Intelligent cost formatting utility
+
+**API & Components**:
+- `app/api/videos/[id]/route.ts` - PATCH endpoint for manual cost override
+- `components/video-cost-editor.tsx` - Inline cost editor for admin
+- `components/pricing-config-editor.tsx` - Full pricing configuration UI
+
+**Integration**:
+- `src/lib/queue/worker.ts` - Modified to calculate costs after generation
+- `prisma/seed.ts` - Updated with pricing configs for all 22 models
+- `app/admin/models/page.tsx` - Integrated pricing editor
+
+### Features
+
+**Automatic Cost Calculation**:
+- Worker automatically calculates costs after successful generation
+- Uses actual video metadata (duration, width, height)
+- Logs cost breakdown and warnings
+- Falls back to costPerSecond if no pricing config
+
+**Manual Cost Entry & Override**:
+- Upload form accepts manual cost input
+- Admin can edit costs on generated videos
+- Inline cost editor with click-to-edit UI
+- Useful for outdated pricing or manual uploads
+
+**Pricing Configuration UI**:
+- Admin panel pricing editor (`/admin/models`)
+- Supports all 4 pricing model types
+- Audio pricing variants toggle
+- Resolution tier management
+- Estimated pricing flag
+
+**Intelligent Cost Formatting**:
+- Always shows at least 2 decimals (e.g., $0.70)
+- Shows 3rd and 4th decimals only if non-zero
+- Strips trailing zeros beyond 2nd decimal
+- Examples: $0.5512, $0.881, $0.35, $0.70
+
+**Public Display**:
+- Cost shown on comparison pages
+- Cost shown on model detail pages
+- Average cost displayed on model pages
+- Consistent formatting everywhere
+
+### Pricing Data
+
+All models seeded with pricing configurations:
+
+**Per-Second Models (8)**:
+- Veo 3.1 Fast, Veo 3.1, Veo 3.1 Reference
+- Sora 2
+- Kling O1
+- Runway Gen-4 Turbo
+- Vidu Q2 Turbo
+- Seedance 1.0 Pro Fast
+
+**Base + Per-Second Models (3)**:
+- Kling 2.5 Turbo Standard
+- Kling 2.5 Turbo Pro
+- Vidu Q2 Pro
+
+**Flat-Rate Models (8)**:
+- Hailuo 2.3 Pro, Standard, Fast Pro, Fast Standard
+- Luma Ray 2, Ray 2 Flash
+- Pika 2 Turbo
+
+**Resolution-Dependent Models (3)**:
+- Sora 2 Pro
+- Wan 2.5 Preview
+- Pika 2.2
+
+**Estimated Pricing**: Models with estimated pricing clearly flagged with `isEstimated: true`
+
+### Technical Implementation
+
+**Type Safety**: Full TypeScript interfaces with union types for pricing configs
+
+**Runtime Validation**: Zod schemas validate pricing data
+
+**Database Integration**: JSON field in Prisma with type casting
+
+**Worker Integration**: Cost calculation happens automatically post-generation
+
+**Error Handling**: Fallback to costPerSecond on calculation errors
+
+**Formatting Utility**: Shared formatCost() function used across all displays
+
+### Benefits
+
+- **Automated**: No manual cost entry needed for most videos
+- **Flexible**: Supports complex pricing models from different providers
+- **Accurate**: Uses actual video metrics, not estimates
+- **Maintainable**: Easy to update pricing via admin UI or seed
+- **Transparent**: Costs visible on public site for comparison
+- **Auditable**: Cost calculation logged for debugging
+
+---
+
 ## Current State & Production Readiness
 
 ### ✅ MVP Complete - All 6 Phases Implemented

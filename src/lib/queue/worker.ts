@@ -4,6 +4,7 @@ import { getProvider } from "../providers/registry";
 import { downloadAndUploadVideo } from "../storage/r2";
 import { generateThumbnail } from "../thumbnails/generate";
 import { connection, type GenerationJobData } from "./index";
+import { CostCalculator, type PricingConfig } from "../pricing";
 
 export function createWorker(concurrency = 5) {
   const worker = new Worker<GenerationJobData>(
@@ -59,6 +60,46 @@ export function createWorker(concurrency = 5) {
             videoId
           );
 
+          // Fetch model to get pricing config
+          const model = await prisma.model.findUnique({
+            where: { id: job.data.modelId },
+            select: {
+              costPerSecond: true,
+              defaultParams: true,
+            },
+          });
+
+          // Extract pricing config from defaultParams
+          const pricingConfig = (model?.defaultParams as any)
+            ?.pricing as PricingConfig | undefined;
+
+          // Calculate cost based on actual video metrics
+          const costResult = CostCalculator.calculate(
+            pricingConfig,
+            {
+              duration: result.duration || 0,
+              width: result.width,
+              height: result.height,
+              hasAudio: false, // Currently all videos have no audio
+              additionalParams: additionalParams,
+            },
+            model?.costPerSecond
+          );
+
+          // Log cost breakdown for monitoring
+          if (costResult.breakdown) {
+            console.log(
+              `[Worker] Cost breakdown for ${videoId}:`,
+              costResult.breakdown
+            );
+          }
+          if (costResult.error) {
+            console.warn(
+              `[Worker] Cost calculation warning for ${videoId}:`,
+              costResult.error
+            );
+          }
+
           // Update video record with all the data
           await prisma.video.update({
             where: { id: videoId },
@@ -73,7 +114,7 @@ export function createWorker(concurrency = 5) {
               height: result.height,
               fileSize: r2Result.fileSize,
               generationTime: result.generationTime,
-              cost: result.cost,
+              cost: costResult.cost,
               apiRequestId: result.apiRequestId,
               apiResponse: result.rawResponse as any,
             },

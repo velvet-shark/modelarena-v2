@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PricingConfigEditor } from "@/components/pricing-config-editor";
+import type { PricingConfig } from "@/src/lib/pricing/types";
 
 interface Provider {
   id: string;
@@ -31,6 +33,7 @@ interface Model {
   endpoint: string | null;
   isActive: boolean;
   costPerSecond: number | null;
+  defaultParams: any;
   provider: Provider;
   capabilities: Capability[];
   _count: {
@@ -54,6 +57,7 @@ export default function ModelsPage() {
     isActive: true,
     costPerSecond: "",
     capabilityIds: [] as string[],
+    pricingConfig: null as PricingConfig | null,
   });
 
   useEffect(() => {
@@ -92,6 +96,7 @@ export default function ModelsPage() {
       isActive: true,
       costPerSecond: "",
       capabilityIds: [],
+      pricingConfig: null,
     });
     setEditingModel(null);
     setShowAddForm(false);
@@ -107,6 +112,7 @@ export default function ModelsPage() {
       isActive: model.isActive,
       costPerSecond: model.costPerSecond?.toString() || "",
       capabilityIds: model.capabilities.map((c) => c.id),
+      pricingConfig: model.defaultParams?.pricing || null,
     });
     setShowAddForm(true);
   };
@@ -121,10 +127,20 @@ export default function ModelsPage() {
 
       const method = editingModel ? "PATCH" : "POST";
 
+      // Build payload with pricing config in defaultParams
+      const payload = {
+        ...formData,
+        defaultParams: formData.pricingConfig
+          ? { pricing: formData.pricingConfig }
+          : null,
+      };
+      // Remove pricingConfig from payload (it's now in defaultParams)
+      delete (payload as any).pricingConfig;
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -317,6 +333,19 @@ export default function ModelsPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pricing Configuration</Label>
+              <PricingConfigEditor
+                value={formData.pricingConfig}
+                onChange={(config) =>
+                  setFormData({ ...formData, pricingConfig: config })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Configure detailed pricing model. Leave empty to use fallback costPerSecond value.
+              </p>
             </div>
 
             <div className="flex gap-2">

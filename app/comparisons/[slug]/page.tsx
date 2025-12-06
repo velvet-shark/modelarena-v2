@@ -7,6 +7,7 @@ import { PlayAllButton } from "@/components/play-all-button";
 import { VoteButton } from "@/components/vote-button";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { formatCost } from "@/src/lib/format-cost";
 
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
@@ -263,6 +264,11 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                       {video.width && video.height && (
                         <span title="Resolution">
                           📐 {video.width}×{video.height}
+                        </span>
+                      )}
+                      {video.cost !== null && (
+                        <span title="Generation cost">
+                          💵 {formatCost(video.cost)}
                         </span>
                       )}
                     </div>

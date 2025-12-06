@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       capabilityIds,
       isActive,
       costPerSecond,
+      defaultParams,
     } = body;
 
     if (!slug || !name || !providerId) {
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
         endpoint,
         isActive: isActive ?? true,
         costPerSecond: costPerSecond ? parseFloat(costPerSecond) : null,
+        defaultParams: defaultParams || undefined,
         capabilities: capabilityIds?.length
           ? {
               connect: capabilityIds.map((id: string) => ({ id })),
