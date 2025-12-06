@@ -12,15 +12,15 @@ export default async function TagsPage() {
         select: {
           comparisons: {
             where: {
-              isPublic: true,
-            },
-          },
-        },
-      },
+              isPublic: true
+            }
+          }
+        }
+      }
     },
     orderBy: {
-      name: "asc",
-    },
+      name: "asc"
+    }
   });
 
   // Filter out tags with no public comparisons
@@ -34,18 +34,14 @@ export default async function TagsPage() {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <h1 className="text-4xl font-bold mb-2 hover:text-primary transition-colors">
-                  ModelArena
-                </h1>
+                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Browse by Tags</p>
             </div>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -73,9 +69,7 @@ export default async function TagsPage() {
         {/* Header */}
         <div className="space-y-2">
           <h2 className="text-3xl font-bold">Browse by Tags</h2>
-          <p className="text-muted-foreground">
-            Explore comparisons organized by {tagsWithComparisons.length} tags.
-          </p>
+          <p className="text-muted-foreground">Explore comparisons organized by {tagsWithComparisons.length} tags.</p>
         </div>
 
         {/* Tags Grid */}
@@ -87,9 +81,7 @@ export default async function TagsPage() {
                 href={`/comparisons?tag=${tag.slug}`}
                 className="group border rounded-lg p-6 hover:shadow-lg transition-shadow space-y-2"
               >
-                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
-                  {tag.name}
-                </h3>
+                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">{tag.name}</h3>
                 <p className="text-sm text-muted-foreground">
                   {tag._count.comparisons} comparison
                   {tag._count.comparisons !== 1 ? "s" : ""}

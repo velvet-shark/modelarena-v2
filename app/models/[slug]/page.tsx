@@ -23,31 +23,31 @@ export default async function ModelPage({ params }: ModelPageProps) {
         where: {
           status: "COMPLETED",
           comparison: {
-            isPublic: true,
-          },
+            isPublic: true
+          }
         },
         include: {
           comparison: {
             include: {
-              sourceImage: true,
-            },
-          },
+              sourceImage: true
+            }
+          }
         },
         orderBy: {
-          createdAt: "desc",
+          createdAt: "desc"
         },
-        take: 50,
+        take: 50
       },
       _count: {
         select: {
           videos: {
             where: {
-              status: "COMPLETED",
-            },
-          },
-        },
-      },
-    },
+              status: "COMPLETED"
+            }
+          }
+        }
+      }
+    }
   });
 
   if (!model) {
@@ -58,21 +58,18 @@ export default async function ModelPage({ params }: ModelPageProps) {
   const completedVideos = model.videos.filter((v) => v.generationTime);
   const avgGenerationTime =
     completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.generationTime || 0), 0) /
-        completedVideos.length
+      ? completedVideos.reduce((sum, v) => sum + (v.generationTime || 0), 0) / completedVideos.length
       : null;
 
   const avgDuration =
     completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) /
-        completedVideos.length
+      ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) / completedVideos.length
       : null;
 
   const videosWithCost = model.videos.filter((v) => v.cost !== null);
   const avgCost =
     videosWithCost.length > 0
-      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) /
-        videosWithCost.length
+      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) / videosWithCost.length
       : null;
 
   return (
@@ -83,18 +80,14 @@ export default async function ModelPage({ params }: ModelPageProps) {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <h1 className="text-4xl font-bold mb-2 hover:text-primary transition-colors">
-                  ModelArena
-                </h1>
+                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Model Details</p>
             </div>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -128,16 +121,11 @@ export default async function ModelPage({ params }: ModelPageProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold">{model.name}</h1>
-              <p className="text-muted-foreground">
-                Provider: {model.provider.displayName}
-              </p>
+              <p className="text-muted-foreground">Provider: {model.provider.displayName}</p>
               {model.capabilities.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {model.capabilities.map((cap) => (
-                    <span
-                      key={cap.id}
-                      className="bg-muted px-3 py-1 rounded-md text-sm"
-                    >
+                    <span key={cap.id} className="bg-muted px-3 py-1 rounded-md text-sm">
                       {cap.name}
                     </span>
                   ))}
@@ -163,9 +151,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
           {avgGenerationTime && (
             <div className="border rounded-lg p-4">
               <div className="text-sm text-muted-foreground">Avg Gen Time</div>
-              <div className="text-2xl font-bold">
-                {avgGenerationTime.toFixed(1)}s
-              </div>
+              <div className="text-2xl font-bold">{avgGenerationTime.toFixed(1)}s</div>
             </div>
           )}
           {avgDuration && (

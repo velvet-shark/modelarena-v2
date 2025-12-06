@@ -8,7 +8,7 @@ export default async function ModelsPage() {
 
   const models = await prisma.model.findMany({
     where: {
-      isActive: true,
+      isActive: true
     },
     include: {
       provider: true,
@@ -19,16 +19,16 @@ export default async function ModelsPage() {
             where: {
               status: "COMPLETED",
               comparison: {
-                isPublic: true,
-              },
-            },
-          },
-        },
-      },
+                isPublic: true
+              }
+            }
+          }
+        }
+      }
     },
     orderBy: {
-      name: "asc",
-    },
+      name: "asc"
+    }
   });
 
   // Group models by provider
@@ -49,18 +49,14 @@ export default async function ModelsPage() {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <h1 className="text-4xl font-bold mb-2 hover:text-primary transition-colors">
-                  ModelArena
-                </h1>
+                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Browse Models</p>
             </div>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -88,9 +84,7 @@ export default async function ModelsPage() {
         {/* Header */}
         <div className="space-y-2">
           <h2 className="text-3xl font-bold">AI Video Generation Models</h2>
-          <p className="text-muted-foreground">
-            Explore {models.length} active models across different providers.
-          </p>
+          <p className="text-muted-foreground">Explore {models.length} active models across different providers.</p>
         </div>
 
         {/* Models by Provider */}
@@ -108,22 +102,15 @@ export default async function ModelsPage() {
                     className="group border rounded-lg p-4 hover:shadow-lg transition-shadow space-y-3"
                   >
                     <div className="space-y-1">
-                      <h4 className="font-semibold group-hover:text-primary transition-colors">
-                        {model.name}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {model.provider.displayName}
-                      </p>
+                      <h4 className="font-semibold group-hover:text-primary transition-colors">{model.name}</h4>
+                      <p className="text-xs text-muted-foreground">{model.provider.displayName}</p>
                     </div>
 
                     {/* Capabilities */}
                     {model.capabilities.length > 0 && (
                       <div className="flex gap-2 flex-wrap">
                         {model.capabilities.map((cap) => (
-                          <span
-                            key={cap.id}
-                            className="text-xs bg-muted px-2 py-1 rounded"
-                          >
+                          <span key={cap.id} className="text-xs bg-muted px-2 py-1 rounded">
                             {cap.name}
                           </span>
                         ))}
@@ -132,9 +119,7 @@ export default async function ModelsPage() {
 
                     {/* Stats */}
                     <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span title="Completed videos">
-                        📹 {model._count.videos} videos
-                      </span>
+                      <span title="Completed videos">📹 {model._count.videos} videos</span>
                     </div>
                   </Link>
                 ))}

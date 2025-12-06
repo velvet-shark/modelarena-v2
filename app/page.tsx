@@ -10,61 +10,61 @@ export default async function HomePage() {
   const featuredComparisons = await prisma.comparison.findMany({
     where: {
       isPublic: true,
-      isFeatured: true,
+      isFeatured: true
     },
     include: {
       sourceImage: true,
       videos: {
         where: {
-          status: "COMPLETED",
+          status: "COMPLETED"
         },
         include: {
-          model: true,
+          model: true
         },
         orderBy: {
-          createdAt: "asc",
-        },
+          createdAt: "asc"
+        }
       },
       _count: {
         select: {
-          videos: true,
-        },
-      },
+          videos: true
+        }
+      }
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: "desc"
     },
-    take: 6,
+    take: 6
   });
 
   // Get recent public comparisons
   const recentComparisons = await prisma.comparison.findMany({
     where: {
-      isPublic: true,
+      isPublic: true
     },
     include: {
       sourceImage: true,
       videos: {
         where: {
-          status: "COMPLETED",
+          status: "COMPLETED"
         },
         include: {
-          model: true,
+          model: true
         },
         orderBy: {
-          createdAt: "asc",
-        },
+          createdAt: "asc"
+        }
       },
       _count: {
         select: {
-          videos: true,
-        },
-      },
+          videos: true
+        }
+      }
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: "desc"
     },
-    take: 12,
+    take: 12
   });
 
   return (
@@ -73,18 +73,13 @@ export default async function HomePage() {
       <div className="border-b">
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">ModelArena</h1>
-              <p className="text-muted-foreground">
-                AI Video Generation Comparison Platform
-              </p>
-            </div>
+            <Link href="/">
+              <img src="/logo.svg" alt="ModelArena" className="h-6" />
+            </Link>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -102,13 +97,10 @@ export default async function HomePage() {
       <div className="max-w-7xl mx-auto p-6 space-y-12">
         {/* Hero Section */}
         <div className="text-center space-y-4 py-8">
-          <h2 className="text-3xl font-bold">
-            Compare AI Video Generation Models
-          </h2>
+          <h2 className="text-3xl font-bold">Compare AI Video Generation Models</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Discover how different AI models perform on the same prompts and
-            images. Compare quality, speed, and style across leading video
-            generation platforms.
+            Discover how different AI models perform on the same prompts and images. Compare quality, speed, and style
+            across leading video generation platforms.
           </p>
           <div className="flex gap-4 justify-center pt-4">
             <Link href="/comparisons">
@@ -158,25 +150,19 @@ export default async function HomePage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <span className="text-muted-foreground">
-                          No preview
-                        </span>
+                        <span className="text-muted-foreground">No preview</span>
                       </div>
                     )}
                   </div>
                   <div className="p-4 space-y-2">
-                    <h3 className="font-semibold group-hover:text-primary transition-colors">
-                      {comparison.title}
-                    </h3>
+                    <h3 className="font-semibold group-hover:text-primary transition-colors">{comparison.title}</h3>
                     {comparison.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {comparison.description}
-                      </p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{comparison.description}</p>
                     )}
                     <div className="flex gap-4 text-xs text-muted-foreground">
                       <span>
-                        {comparison.videos.filter((v) => v.status === "COMPLETED").length} /{" "}
-                        {comparison._count.videos} models
+                        {comparison.videos.filter((v) => v.status === "COMPLETED").length} / {comparison._count.videos}{" "}
+                        models
                       </span>
                       <span className="capitalize">{comparison.type}</span>
                     </div>
@@ -218,9 +204,7 @@ export default async function HomePage() {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <span className="text-muted-foreground">
-                          No preview
-                        </span>
+                        <span className="text-muted-foreground">No preview</span>
                       </div>
                     )}
                   </div>
@@ -229,9 +213,7 @@ export default async function HomePage() {
                       {comparison.title}
                     </h3>
                     <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span>
-                        {comparison.videos.filter((v) => v.status === "COMPLETED").length} models
-                      </span>
+                      <span>{comparison.videos.filter((v) => v.status === "COMPLETED").length} models</span>
                       <span className="capitalize">{comparison.type}</span>
                     </div>
                   </div>
@@ -244,9 +226,7 @@ export default async function HomePage() {
         {/* Empty State */}
         {recentComparisons.length === 0 && (
           <div className="border rounded-lg p-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              No public comparisons yet.
-            </p>
+            <p className="text-muted-foreground mb-4">No public comparisons yet.</p>
             {session?.user && (
               <Link href="/admin/generate">
                 <Button>Create Your First Comparison</Button>

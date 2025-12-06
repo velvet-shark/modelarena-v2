@@ -5,17 +5,16 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { PlayAllButton } from "@/components/play-all-button";
 import { VoteButton } from "@/components/vote-button";
+import { AddModelsForm } from "@/components/add-models-form";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth, isAdmin } from "@/lib/auth";
 import { formatCost } from "@/src/lib/format-cost";
 
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: ComparisonPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: ComparisonPageProps): Promise<Metadata> {
   const { slug } = await params;
 
   const comparison = await prisma.comparison.findUnique({
@@ -24,27 +23,26 @@ export async function generateMetadata({
       sourceImage: true,
       videos: {
         where: { status: "COMPLETED" },
-        take: 1,
-      },
-    },
+        take: 1
+      }
+    }
   });
 
   if (!comparison || !comparison.isPublic) {
     return {
-      title: "Comparison Not Found",
+      title: "Comparison Not Found"
     };
   }
 
-  const imageUrl =
-    comparison.sourceImage?.url ||
-    comparison.videos[0]?.thumbnailUrl ||
-    "/og-image.png";
+  const imageUrl = comparison.sourceImage?.url || comparison.videos[0]?.thumbnailUrl || "/og-image.png";
 
   return {
     title: comparison.title,
     description:
       comparison.description ||
-      `Compare AI video generation results from ${comparison.videos.length} models using the prompt: ${comparison.prompt.slice(0, 150)}...`,
+      `Compare AI video generation results from ${
+        comparison.videos.length
+      } models using the prompt: ${comparison.prompt.slice(0, 150)}...`,
     openGraph: {
       type: "article",
       title: comparison.title,
@@ -54,22 +52,23 @@ export async function generateMetadata({
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: comparison.title,
-        },
-      ],
+          alt: comparison.title
+        }
+      ]
     },
     twitter: {
       card: "summary_large_image",
       title: comparison.title,
       description: comparison.description || comparison.prompt,
-      images: [imageUrl],
-    },
+      images: [imageUrl]
+    }
   };
 }
 
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { slug } = await params;
   const session = await auth();
+  const isUserAdmin = session?.user?.email ? isAdmin(session.user.email) : false;
 
   const comparison = await prisma.comparison.findUnique({
     where: { slug },
@@ -77,26 +76,41 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       sourceImage: true,
       videos: {
         where: {
-          status: "COMPLETED",
+          status: "COMPLETED"
         },
         include: {
           model: {
             include: {
-              provider: true,
-            },
-          },
+              provider: true
+            }
+          }
         },
         orderBy: {
-          createdAt: "asc",
-        },
+          createdAt: "asc"
+        }
       },
-      tags: true,
-    },
+      tags: true
+    }
   });
 
   if (!comparison || !comparison.isPublic) {
     notFound();
   }
+
+  // Fetch all models for admin to add more
+  const allModels = isUserAdmin
+    ? await prisma.model.findMany({
+        where: { isActive: true },
+        include: {
+          provider: true
+        },
+        orderBy: {
+          name: "asc"
+        }
+      })
+    : [];
+
+  const existingModelIds = comparison.videos.map((v) => v.modelId);
 
   return (
     <main className="min-h-screen">
@@ -106,18 +120,14 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <h1 className="text-4xl font-bold mb-2 hover:text-primary transition-colors">
-                  ModelArena
-                </h1>
+                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Comparison Details</p>
             </div>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -158,9 +168,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                   </span>
                 )}
               </div>
-              {comparison.description && (
-                <p className="text-muted-foreground">{comparison.description}</p>
-              )}
+              {comparison.description && <p className="text-muted-foreground">{comparison.description}</p>}
               <div className="flex gap-4 text-sm text-muted-foreground">
                 <span>{comparison.videos.length} models compared</span>
                 <span>•</span>
@@ -215,6 +223,11 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           </div>
         )}
 
+        {/* Add Models (Admin Only) */}
+        {isUserAdmin && (
+          <AddModelsForm comparisonId={comparison.id} allModels={allModels} existingModelIds={existingModelIds} />
+        )}
+
         {/* Videos */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -246,46 +259,28 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                       >
                         {video.model.name}
                       </Link>
-                      <div className="text-xs text-muted-foreground">
-                        {video.model.provider.displayName}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{video.model.provider.displayName}</div>
                     </div>
                     <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
                       {video.generationTime && (
-                        <span title="Generation time">
-                          ⏱ {video.generationTime.toFixed(1)}s
-                        </span>
+                        <span title="Generation time">⏱ {video.generationTime.toFixed(1)}s</span>
                       )}
-                      {video.duration && (
-                        <span title="Video duration">
-                          📹 {video.duration.toFixed(1)}s
-                        </span>
-                      )}
+                      {video.duration && <span title="Video duration">📹 {video.duration.toFixed(1)}s</span>}
                       {video.width && video.height && (
                         <span title="Resolution">
                           📐 {video.width}×{video.height}
                         </span>
                       )}
-                      {video.cost !== null && (
-                        <span title="Generation cost">
-                          💵 {formatCost(video.cost)}
-                        </span>
-                      )}
+                      {video.cost !== null && <span title="Generation cost">💵 {formatCost(video.cost)}</span>}
                     </div>
-                    <VoteButton
-                      videoId={video.id}
-                      initialVoteCount={video.voteCount}
-                      className="w-full mt-2"
-                    />
+                    <VoteButton videoId={video.id} initialVoteCount={video.voteCount} className="w-full mt-2" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="border rounded-lg p-12 text-center">
-              <p className="text-muted-foreground">
-                No completed videos yet for this comparison.
-              </p>
+              <p className="text-muted-foreground">No completed videos yet for this comparison.</p>
             </div>
           )}
         </div>

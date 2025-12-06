@@ -20,7 +20,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
 
   // Build where clause based on filters
   const whereClause: any = {
-    isPublic: true,
+    isPublic: true
   };
 
   if (params.type) {
@@ -30,8 +30,8 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
   if (params.tag) {
     whereClause.tags = {
       some: {
-        slug: params.tag,
-      },
+        slug: params.tag
+      }
     };
   }
 
@@ -40,21 +40,21 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
       {
         title: {
           contains: params.q,
-          mode: "insensitive",
-        },
+          mode: "insensitive"
+        }
       },
       {
         description: {
           contains: params.q,
-          mode: "insensitive",
-        },
+          mode: "insensitive"
+        }
       },
       {
         prompt: {
           contains: params.q,
-          mode: "insensitive",
-        },
-      },
+          mode: "insensitive"
+        }
+      }
     ];
   }
 
@@ -64,43 +64,43 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
       sourceImage: true,
       videos: {
         where: {
-          status: "COMPLETED",
+          status: "COMPLETED"
         },
         include: {
-          model: true,
+          model: true
         },
         orderBy: {
-          createdAt: "asc",
-        },
+          createdAt: "asc"
+        }
       },
       tags: true,
       _count: {
         select: {
-          videos: true,
-        },
-      },
+          videos: true
+        }
+      }
     },
     orderBy: [
       {
-        isFeatured: "desc",
+        isFeatured: "desc"
       },
       {
-        createdAt: "desc",
-      },
-    ],
+        createdAt: "desc"
+      }
+    ]
   });
 
   // Get all tags for filter
   const allTags = await prisma.tag.findMany({
     orderBy: {
-      name: "asc",
-    },
+      name: "asc"
+    }
   });
 
   const typeOptions = [
     { value: "", label: "All Types" },
     { value: "image-to-video", label: "Image to Video" },
-    { value: "text-to-video", label: "Text to Video" },
+    { value: "text-to-video", label: "Text to Video" }
   ];
 
   return (
@@ -111,18 +111,14 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <h1 className="text-4xl font-bold mb-2 hover:text-primary transition-colors">
-                  ModelArena
-                </h1>
+                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Browse Comparisons</p>
             </div>
             <div className="flex gap-4">
               {session?.user ? (
                 <>
-                  <span className="text-sm text-muted-foreground self-center">
-                    {session.user.email}
-                  </span>
+                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
                   <Link href="/admin">
                     <Button>Admin Panel</Button>
                   </Link>
@@ -161,8 +157,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                   key={option.value}
                   href={`/comparisons${option.value ? `?type=${option.value}` : ""}`}
                   className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-                    params.type === option.value ||
-                    (!params.type && option.value === "")
+                    params.type === option.value || (!params.type && option.value === "")
                       ? "bg-primary text-primary-foreground"
                       : "hover:bg-muted"
                   }`}
@@ -188,9 +183,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                     key={tag.id}
                     href={`/comparisons?tag=${tag.slug}`}
                     className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-                      params.tag === tag.slug
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
+                      params.tag === tag.slug ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                     }`}
                   >
                     {tag.name}
@@ -249,23 +242,16 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                     {comparison.title}
                   </h3>
                   {comparison.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {comparison.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{comparison.description}</p>
                   )}
                   <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span>
-                      {comparison.videos.filter((v) => v.status === "COMPLETED").length} models
-                    </span>
+                    <span>{comparison.videos.filter((v) => v.status === "COMPLETED").length} models</span>
                     <span className="capitalize">{comparison.type}</span>
                   </div>
                   {comparison.tags.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
                       {comparison.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="text-xs bg-muted px-2 py-1 rounded"
-                        >
+                        <span key={tag.id} className="text-xs bg-muted px-2 py-1 rounded">
                           {tag.name}
                         </span>
                       ))}
@@ -277,9 +263,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
           </div>
         ) : (
           <div className="border rounded-lg p-12 text-center">
-            <p className="text-muted-foreground">
-              No comparisons found with the selected filters.
-            </p>
+            <p className="text-muted-foreground">No comparisons found with the selected filters.</p>
             <Link href="/comparisons">
               <Button variant="outline" className="mt-4">
                 Clear Filters
