@@ -15,12 +15,15 @@
 - ✅ Provider abstraction layer
 - ✅ Redis and BullMQ setup
 - ✅ fal.ai provider implementation
-- ✅ Comparison creation flow
+- ✅ Comparison creation flow (with image-to-video & text-to-video support)
 - ✅ Job queue and worker process
 - ✅ Video upload to R2
+- ✅ Image upload to R2 with validation
 - ✅ Thumbnail generation with FFmpeg
-- ✅ Admin generate UI
-- ✅ API routes for comparison and retry
+- ✅ Admin generate UI with type selector and image upload
+- ✅ Admin comparisons list and detail pages
+- ✅ API routes for comparison, retry, and image upload
+- ✅ UI components (Input, Label, Textarea, Checkbox, RadioGroup)
 
 ### Phase 3: Public Interface 📋 TODO
 ### Phase 4: Admin Features 📋 TODO
@@ -1267,15 +1270,56 @@ modelarena/
 - ✅ Build comparison creation flow
 - ✅ Add job queue and worker process
 - ✅ Implement video upload to R2
+- ✅ Implement image upload to R2
 - ✅ Add thumbnail generation with FFmpeg
+- ✅ Build admin generate UI with type selector and image upload
+- ✅ Create admin comparisons management pages
+- ✅ Implement retry functionality for failed videos
 
-**Notes**:
+**What Was Built**:
+
+*Provider System*:
 - Provider abstraction supports fal.ai, runway (stub), and manual upload
+- VideoProvider interface with GenerationRequest/GenerationResult types
+- Provider registry for dynamic provider lookup
+
+*Job Queue*:
 - BullMQ worker processes jobs with 5 concurrent jobs by default
-- Video generation flow: API → Queue → Worker → Provider → R2 → Thumbnail → DB
-- Admin generate UI at /admin/generate with model selector
-- Retry functionality available for failed videos at /api/videos/[id]/retry
-- Worker can be run standalone with `pnpm worker`
+- Exponential backoff retry strategy (3 attempts, 5s initial delay)
+- Job cleanup: keeps last 100 completed, 500 failed for debugging
+- Standalone worker process: `pnpm worker`
+
+*API Routes*:
+- POST /api/comparisons - Create comparison with multiple models
+- GET /api/comparisons - List all comparisons (supports public filter)
+- POST /api/videos/[id]/retry - Retry failed video generation
+- POST /api/upload/image - Upload source images (max 10MB, validates types)
+
+*Admin UI*:
+- /admin/generate - Create comparisons with type selector (image-to-video/text-to-video)
+- /admin/comparisons - List all comparisons with status overview
+- /admin/comparisons/[id] - Detailed view with video grid and retry buttons
+- Model selector grouped by provider with select all/deselect all
+- Image upload with preview and drag-and-drop UI
+
+*Components*:
+- GenerateForm - Main comparison creation form with validation
+- VideoRetryButton - Interactive retry with loading states
+- UI primitives: Input, Label, Textarea, Checkbox, RadioGroup
+
+*Video Generation Flow*:
+API → Queue → Worker → Provider → R2 → Thumbnail → DB
+
+**Technical Learnings**:
+- Next.js 15 requires async params: `params: Promise<{ id: string }>`
+- Extract FormData before async operations to avoid lost form references
+- Image upload must complete before comparison creation (sequential flow)
+- Prisma Json fields can't be set to `null` directly in updates (omit instead)
+- R2 client needs explicit region: "auto" for Cloudflare
+
+**Partially Implemented from Phase 4**:
+- Comparison management interface (/admin/comparisons pages)
+- Retry functionality (was planned for Phase 4 but needed for Phase 2 workflow)
 
 ### Phase 3: Public Interface
 - Build homepage with featured comparisons
@@ -1285,11 +1329,15 @@ modelarena/
 - Implement tag system
 
 ### Phase 4: Admin Features
-- Build admin dashboard with stats
-- Create comparison management interface
-- Add retry functionality for failed videos
-- Implement manual upload form
-- Add job queue monitoring
+- Build admin dashboard with stats (exists at /admin but needs enhancement)
+- ~~Create comparison management interface~~ ✅ Done in Phase 2
+- ~~Add retry functionality for failed videos~~ ✅ Done in Phase 2
+- Implement manual upload form (/admin/upload)
+- Add job queue monitoring (/admin/jobs)
+- Model management interface (/admin/models)
+- Comparison edit/update functionality
+- Bulk operations (delete, publish, feature)
+- Advanced filtering and search
 
 ### Phase 5: Enhanced Features
 - Implement anonymous voting system
@@ -1307,22 +1355,81 @@ modelarena/
 
 ---
 
+## Considerations for Future Phases
+
+### Phase 3 - Public Interface
+**Requirements**:
+- GET /api/comparisons/[id] route for public comparison view
+- Video grid component (can reuse from admin detail page)
+- Public layout without auth requirement
+- Filtering by type, tags, featured status
+- Pagination for comparison lists
+
+**Technical Notes**:
+- Reuse VideoCard component from admin pages
+- Consider server components for SEO (Next.js 15 app router)
+- Public pages should not require authentication middleware
+
+### Phase 4 - Remaining Admin Features
+**Requirements**:
+- Manual video upload form with metadata entry
+- Job queue monitoring with real-time updates (consider WebSocket or polling)
+- Model CRUD operations (add, edit, deactivate)
+- Comparison edit functionality (update title, description, toggle public/featured)
+- Bulk operations UI (select multiple comparisons, batch publish/delete)
+
+**Technical Notes**:
+- Manual upload needs different flow (no provider API call)
+- Job monitoring could use BullMQ's built-in events
+- Consider using Server-Sent Events (SSE) for real-time job updates
+- Model management should validate provider compatibility
+
+### Phase 5 - Enhanced Features
+**Requirements**:
+- Anonymous voting needs FingerprintJS integration
+- Performance charts need data aggregation (avg generation time, success rate)
+- Runway direct API implementation (different flow than fal.ai)
+- Real-time status updates for processing videos
+
+**Technical Notes**:
+- Voting requires IP hash + fingerprint for duplicate prevention
+- Charts could use Recharts or similar library
+- Runway API uses polling pattern (different from fal.ai subscribe)
+- Real-time updates: consider WebSocket, SSE, or polling strategy
+
+### Phase 6 - Polish
+**Requirements**:
+- Error boundaries for graceful error handling
+- Loading states and skeletons for better UX
+- Mobile-responsive video grid (consider aspect ratios)
+- Image optimization (Next.js Image component)
+- Comprehensive error logging (consider Sentry or similar)
+
+**Technical Notes**:
+- Next.js 15 has built-in error.tsx support
+- Video player mobile controls need testing
+- R2 images should be served with appropriate caching headers
+- Consider adding health check endpoints for monitoring
+
+---
+
 ## API Endpoints Summary
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/comparisons` | List comparisons | Public |
-| POST | `/api/comparisons` | Create comparison | Admin |
-| GET | `/api/comparisons/[id]` | Get comparison | Public |
-| PATCH | `/api/comparisons/[id]` | Update comparison | Admin |
-| DELETE | `/api/comparisons/[id]` | Delete comparison | Admin |
-| GET | `/api/videos` | List videos | Public |
-| POST | `/api/videos/[id]/retry` | Retry failed video | Admin |
-| POST | `/api/videos/[id]/vote` | Vote for video | Public |
-| GET | `/api/models` | List models | Public |
-| POST | `/api/models` | Create model | Admin |
-| POST | `/api/upload` | Upload manual video | Admin |
-| GET | `/api/jobs` | List jobs | Admin |
+| Method | Endpoint | Description | Auth | Status |
+|--------|----------|-------------|------|--------|
+| GET | `/api/comparisons` | List comparisons | Public | ✅ Phase 2 |
+| POST | `/api/comparisons` | Create comparison | Admin | ✅ Phase 2 |
+| GET | `/api/comparisons/[id]` | Get comparison | Public | 📋 Phase 3 |
+| PATCH | `/api/comparisons/[id]` | Update comparison | Admin | 📋 Phase 4 |
+| DELETE | `/api/comparisons/[id]` | Delete comparison | Admin | 📋 Phase 4 |
+| GET | `/api/videos` | List videos | Public | 📋 Phase 3 |
+| POST | `/api/videos/[id]/retry` | Retry failed video | Admin | ✅ Phase 2 |
+| POST | `/api/videos/[id]/vote` | Vote for video | Public | 📋 Phase 5 |
+| POST | `/api/upload/image` | Upload source image | Admin | ✅ Phase 2 |
+| POST | `/api/upload/video` | Upload manual video | Admin | 📋 Phase 4 |
+| GET | `/api/models` | List models | Public | 📋 Phase 3 |
+| POST | `/api/models` | Create model | Admin | 📋 Phase 4 |
+| GET | `/api/jobs` | List jobs | Admin | 📋 Phase 4 |
 
 ---
 
