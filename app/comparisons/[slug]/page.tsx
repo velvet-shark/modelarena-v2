@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PlayAllButton } from "@/components/play-all-button";
+import { VoteButton } from "@/components/vote-button";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
@@ -202,6 +203,11 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                         </span>
                       )}
                     </div>
+                    <VoteButton
+                      videoId={video.id}
+                      initialVoteCount={video.voteCount}
+                      className="w-full mt-2"
+                    />
                   </div>
                 </div>
               ))}

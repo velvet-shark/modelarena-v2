@@ -119,6 +119,11 @@ export default async function HomePage() {
                 View Models
               </Button>
             </Link>
+            <Link href="/analytics">
+              <Button size="lg" variant="outline">
+                Analytics
+              </Button>
+            </Link>
           </div>
         </div>
 

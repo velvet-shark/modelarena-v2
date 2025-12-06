@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useJobStream } from "@/hooks/use-job-stream";
 
 interface Job {
   id: string;
@@ -27,37 +28,22 @@ interface Job {
 }
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true);
+  const { data, connected } = useJobStream(realtimeEnabled);
 
-  const fetchJobs = async () => {
-    try {
-      const url =
-        filter === "all"
-          ? "/api/jobs?limit=200"
-          : `/api/jobs?status=${filter}&limit=200`;
-      const response = await fetch(url);
-      const data = await response.json();
-      setJobs(data.jobs || []);
-    } catch (error) {
-      console.error("Failed to fetch jobs:", error);
-    } finally {
-      setLoading(false);
-    }
+  const jobs = useMemo(() => {
+    if (!data?.jobs) return [];
+    if (filter === "all") return data.jobs;
+    return data.jobs.filter((job: Job) => job.status === filter);
+  }, [data, filter]);
+
+  const stats = data?.stats || {
+    pending: 0,
+    active: 0,
+    completed: 0,
+    failed: 0,
   };
-
-  useEffect(() => {
-    fetchJobs();
-  }, [filter]);
-
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(fetchJobs, 5000); // Refresh every 5 seconds
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, filter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -87,33 +73,51 @@ export default function JobsPage() {
     return `${seconds}s`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">Loading jobs...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Job Queue Monitor</h1>
           <p className="text-muted-foreground mt-1">
-            Monitor video generation job queue
+            Real-time video generation job queue monitoring
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div
+            className={`h-2 w-2 rounded-full ${
+              connected ? "bg-green-500" : "bg-red-500"
+            }`}
+            title={connected ? "Connected" : "Disconnected"}
+          />
+          <span className="text-sm text-muted-foreground">
+            {connected ? "Live" : "Offline"}
+          </span>
           <Button
-            variant={autoRefresh ? "default" : "outline"}
-            onClick={() => setAutoRefresh(!autoRefresh)}
+            variant={realtimeEnabled ? "default" : "outline"}
+            onClick={() => setRealtimeEnabled(!realtimeEnabled)}
           >
-            {autoRefresh ? "Auto-refresh: ON" : "Auto-refresh: OFF"}
+            {realtimeEnabled ? "Real-time: ON" : "Real-time: OFF"}
           </Button>
-          <Button onClick={fetchJobs} variant="outline">
-            Refresh
-          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Pending</div>
+          <div className="text-2xl font-bold">{stats.pending}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Active</div>
+          <div className="text-2xl font-bold">{stats.active}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Completed</div>
+          <div className="text-2xl font-bold">{stats.completed}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Failed</div>
+          <div className="text-2xl font-bold">{stats.failed}</div>
         </div>
       </div>
 

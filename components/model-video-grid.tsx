@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { VoteButton } from "@/components/vote-button";
 
 interface Video {
   id: string;
@@ -10,6 +11,7 @@ interface Video {
   duration: number | null;
   width: number | null;
   height: number | null;
+  voteCount: number;
   comparison: {
     slug: string;
     title: string;
@@ -85,6 +87,11 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
             <p className="text-xs text-muted-foreground line-clamp-2">
               {video.comparison.description || video.comparison.prompt}
             </p>
+            <VoteButton
+              videoId={video.id}
+              initialVoteCount={video.voteCount}
+              className="w-full mt-2"
+            />
           </div>
         </div>
       ))}

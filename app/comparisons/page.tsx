@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ComparisonSearch } from "@/components/comparison-search";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
 interface SearchParams {
   type?: string;
   tag?: string;
+  q?: string;
 }
 
 interface PageProps {
@@ -31,6 +33,29 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
         slug: params.tag,
       },
     };
+  }
+
+  if (params.q) {
+    whereClause.OR = [
+      {
+        title: {
+          contains: params.q,
+          mode: "insensitive",
+        },
+      },
+      {
+        description: {
+          contains: params.q,
+          mode: "insensitive",
+        },
+      },
+      {
+        prompt: {
+          contains: params.q,
+          mode: "insensitive",
+        },
+      },
+    ];
   }
 
   const comparisons = await prisma.comparison.findMany({
@@ -121,6 +146,9 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
           <span className="text-muted-foreground">/</span>
           <span>Comparisons</span>
         </div>
+
+        {/* Search */}
+        <ComparisonSearch />
 
         {/* Filters */}
         <div className="border rounded-lg p-4 space-y-4">
