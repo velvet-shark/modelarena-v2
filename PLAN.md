@@ -11,7 +11,17 @@
 - ✅ NextAuth v5 with OAuth (GitHub)
 - ✅ Basic admin layout and authentication
 
-### Phase 2: Core Generation 🔄 TODO
+### Phase 2: Core Generation ✅ COMPLETED
+- ✅ Provider abstraction layer
+- ✅ Redis and BullMQ setup
+- ✅ fal.ai provider implementation
+- ✅ Comparison creation flow
+- ✅ Job queue and worker process
+- ✅ Video upload to R2
+- ✅ Thumbnail generation with FFmpeg
+- ✅ Admin generate UI
+- ✅ API routes for comparison and retry
+
 ### Phase 3: Public Interface 📋 TODO
 ### Phase 4: Admin Features 📋 TODO
 ### Phase 5: Enhanced Features 📋 TODO
@@ -1250,14 +1260,22 @@ modelarena/
 - Admin authentication uses email whitelist from ADMIN_EMAILS env var
 - R2 client ready but requires environment variables to be configured
 
-### Phase 2: Core Generation
-- Implement provider abstraction layer
-- Set up Redis and BullMQ
-- Implement fal.ai provider (covers most models)
-- Build comparison creation flow
-- Add job queue and worker process
-- Implement video upload to R2
-- Add thumbnail generation with FFmpeg
+### Phase 2: Core Generation ✅ COMPLETED
+- ✅ Implement provider abstraction layer
+- ✅ Set up Redis and BullMQ
+- ✅ Implement fal.ai provider (covers most models)
+- ✅ Build comparison creation flow
+- ✅ Add job queue and worker process
+- ✅ Implement video upload to R2
+- ✅ Add thumbnail generation with FFmpeg
+
+**Notes**:
+- Provider abstraction supports fal.ai, runway (stub), and manual upload
+- BullMQ worker processes jobs with 5 concurrent jobs by default
+- Video generation flow: API → Queue → Worker → Provider → R2 → Thumbnail → DB
+- Admin generate UI at /admin/generate with model selector
+- Retry functionality available for failed videos at /api/videos/[id]/retry
+- Worker can be run standalone with `pnpm worker`
 
 ### Phase 3: Public Interface
 - Build homepage with featured comparisons
