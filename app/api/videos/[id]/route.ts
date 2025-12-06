@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { deleteFile } from "@/lib/storage/r2";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -107,6 +108,72 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     console.error("Video update error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Update failed" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/videos/[id]
+ * Delete a video and its R2 files (admin only)
+ */
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
+  if (!adminEmails.includes(session.user.email)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const { id } = await context.params;
+
+    // Fetch video before deletion
+    const video = await prisma.video.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
+
+    // Delete R2 files (best effort)
+    const r2DeletePromises: Promise<void>[] = [];
+
+    // Delete video file
+    if (video.r2Key) {
+      r2DeletePromises.push(
+        deleteFile(video.r2Key).catch((err) =>
+          console.error(`Failed to delete video ${video.r2Key}:`, err)
+        )
+      );
+    }
+
+    // Delete thumbnail
+    if (video.thumbnailKey) {
+      r2DeletePromises.push(
+        deleteFile(video.thumbnailKey).catch((err) =>
+          console.error(`Failed to delete thumbnail ${video.thumbnailKey}:`, err)
+        )
+      );
+    }
+
+    // Wait for R2 deletions
+    await Promise.all(r2DeletePromises);
+
+    // Delete video record
+    await prisma.video.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Video deletion error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Deletion failed" },
       { status: 500 }
     );
   }

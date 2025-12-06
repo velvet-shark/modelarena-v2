@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { deleteFile } from "@/lib/storage/r2";
 
 // GET /api/comparisons/[id] - Get a single comparison (public)
 export async function GET(
@@ -133,7 +134,77 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Videos will be cascade deleted due to onDelete: Cascade in schema
+    // Fetch comparison with videos and source image before deletion
+    const comparison = await prisma.comparison.findUnique({
+      where: { id },
+      include: {
+        videos: true,
+        sourceImage: true,
+      },
+    });
+
+    if (!comparison) {
+      return NextResponse.json(
+        { error: "Comparison not found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete all R2 files for videos
+    const r2DeletePromises: Promise<void>[] = [];
+
+    for (const video of comparison.videos) {
+      // Delete video file
+      if (video.r2Key) {
+        r2DeletePromises.push(
+          deleteFile(video.r2Key).catch((err) =>
+            console.error(`Failed to delete video ${video.r2Key}:`, err)
+          )
+        );
+      }
+
+      // Delete thumbnail
+      if (video.thumbnailKey) {
+        r2DeletePromises.push(
+          deleteFile(video.thumbnailKey).catch((err) =>
+            console.error(`Failed to delete thumbnail ${video.thumbnailKey}:`, err)
+          )
+        );
+      }
+    }
+
+    // Delete source image if it exists and is not used by other comparisons
+    if (comparison.sourceImage) {
+      const sourceImage = comparison.sourceImage;
+      const otherComparisonsUsingImage = await prisma.comparison.count({
+        where: {
+          sourceImageId: comparison.sourceImageId,
+          id: { not: id },
+        },
+      });
+
+      if (otherComparisonsUsingImage === 0) {
+        // Safe to delete - no other comparisons use this image
+        r2DeletePromises.push(
+          deleteFile(sourceImage.r2Key).catch((err) =>
+            console.error(
+              `Failed to delete source image ${sourceImage.r2Key}:`,
+              err
+            )
+          )
+        );
+
+        // Also delete the SourceImage record
+        await prisma.sourceImage.delete({
+          where: { id: comparison.sourceImageId! },
+        });
+      }
+    }
+
+    // Wait for all R2 deletions to complete (best effort)
+    await Promise.all(r2DeletePromises);
+
+    // Delete comparison (videos will be cascade deleted)
     await prisma.comparison.delete({
       where: { id },
     });
