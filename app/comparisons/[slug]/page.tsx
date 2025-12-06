@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { PlayAllButton } from "@/components/play-all-button";
 import { VoteButton } from "@/components/vote-button";
@@ -8,6 +10,60 @@ import { auth } from "@/lib/auth";
 
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: ComparisonPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  const comparison = await prisma.comparison.findUnique({
+    where: { slug },
+    include: {
+      sourceImage: true,
+      videos: {
+        where: { status: "COMPLETED" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!comparison || !comparison.isPublic) {
+    return {
+      title: "Comparison Not Found",
+    };
+  }
+
+  const imageUrl =
+    comparison.sourceImage?.url ||
+    comparison.videos[0]?.thumbnailUrl ||
+    "/og-image.png";
+
+  return {
+    title: comparison.title,
+    description:
+      comparison.description ||
+      `Compare AI video generation results from ${comparison.videos.length} models using the prompt: ${comparison.prompt.slice(0, 150)}...`,
+    openGraph: {
+      type: "article",
+      title: comparison.title,
+      description: comparison.description || comparison.prompt,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: comparison.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: comparison.title,
+      description: comparison.description || comparison.prompt,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
@@ -144,11 +200,16 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Source Image</h2>
             <div className="border rounded-lg p-4 bg-muted/50">
-              <img
-                src={comparison.sourceImage.url}
-                alt="Source"
-                className="max-h-96 mx-auto rounded"
-              />
+              <div className="relative max-w-2xl mx-auto">
+                <Image
+                  src={comparison.sourceImage.url}
+                  alt="Source"
+                  width={comparison.sourceImage.width || 800}
+                  height={comparison.sourceImage.height || 600}
+                  className="rounded object-contain w-full h-auto max-h-96"
+                  priority
+                />
+              </div>
             </div>
           </div>
         )}
@@ -171,6 +232,8 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                       src={video.url || ""}
                       poster={video.thumbnailUrl || undefined}
                       controls
+                      playsInline
+                      preload="metadata"
                       className="w-full h-full object-cover"
                     />
                   </div>

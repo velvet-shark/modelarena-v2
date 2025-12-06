@@ -34,6 +34,9 @@ model Model {
   videos        Video[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+
+  @@index([isActive])
+  @@index([providerId])
 }
 
 model Capability {
@@ -60,7 +63,10 @@ model Comparison {
 
   @@index([type])
   @@index([isPublic])
+  @@index([isFeatured])
   @@index([createdAt])
+  @@index([isPublic, createdAt])
+  @@index([isFeatured, createdAt])
 }
 
 model SourceImage {
@@ -116,6 +122,8 @@ model Video {
   @@index([status])
   @@index([comparisonId])
   @@index([modelId])
+  @@index([voteCount])
+  @@index([status, comparisonId])
 }
 
 enum VideoStatus {
@@ -166,6 +174,8 @@ model Job {
 
   @@index([status])
   @@index([videoId])
+  @@index([comparisonId])
+  @@index([createdAt])
 }
 
 // NextAuth.js Models
