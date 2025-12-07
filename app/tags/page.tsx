@@ -46,11 +46,7 @@ export default async function TagsPage() {
                     <Button>Admin Panel</Button>
                   </Link>
                 </>
-              ) : (
-                <Link href="/auth/signin">
-                  <Button variant="outline">Sign In</Button>
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

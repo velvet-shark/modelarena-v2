@@ -7,6 +7,7 @@ import { PlayAllButton } from "@/components/play-all-button";
 import { VoteButton } from "@/components/vote-button";
 import { VideoDeleteButton } from "@/components/video-delete-button";
 import { AddModelsForm } from "@/components/add-models-form";
+import { SourceImageViewer } from "@/components/source-image-viewer";
 import prisma from "@/lib/prisma";
 import { auth, isAdmin } from "@/lib/auth";
 import { formatCost } from "@/src/lib/format-cost";
@@ -133,11 +134,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                     <Button>Admin Panel</Button>
                   </Link>
                 </>
-              ) : (
-                <Link href="/auth/signin">
-                  <Button variant="outline">Sign In</Button>
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -210,16 +207,12 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Source Image</h2>
             <div className="border rounded-lg p-4 bg-muted/50">
-              <div className="relative max-w-2xl mx-auto">
-                <Image
-                  src={comparison.sourceImage.url}
-                  alt="Source"
-                  width={comparison.sourceImage.width || 800}
-                  height={comparison.sourceImage.height || 600}
-                  className="rounded object-contain w-full h-auto max-h-96"
-                  priority
-                />
-              </div>
+              <SourceImageViewer
+                url={comparison.sourceImage.url}
+                width={comparison.sourceImage.width}
+                height={comparison.sourceImage.height}
+                alt="Source"
+              />
             </div>
           </div>
         )}

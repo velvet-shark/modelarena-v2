@@ -77,11 +77,7 @@ export default async function AnalyticsPage() {
                     <Button>Admin Panel</Button>
                   </Link>
                 </>
-              ) : (
-                <Link href="/auth/signin">
-                  <Button variant="outline">Sign In</Button>
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

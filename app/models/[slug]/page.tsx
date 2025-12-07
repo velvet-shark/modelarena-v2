@@ -92,11 +92,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                     <Button>Admin Panel</Button>
                   </Link>
                 </>
-              ) : (
-                <Link href="/auth/signin">
-                  <Button variant="outline">Sign In</Button>
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
