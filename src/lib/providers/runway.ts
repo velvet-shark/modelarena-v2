@@ -71,15 +71,16 @@ export class RunwayProvider implements VideoProvider {
     modelEndpoint: string,
     request: GenerationRequest
   ): Promise<string> {
-    const payload: any = {
-      model: modelEndpoint,
-      prompt_text: request.prompt,
-    };
-
-    // Add image if provided (for image-to-video)
-    if (request.sourceImageUrl) {
-      payload.prompt_image = request.sourceImageUrl;
+    // Runway API requires promptImage for image-to-video
+    if (!request.sourceImageUrl) {
+      throw new Error("Runway image-to-video requires a source image");
     }
+
+    const payload: Record<string, unknown> = {
+      model: modelEndpoint,
+      promptImage: request.sourceImageUrl,
+      promptText: request.prompt,
+    };
 
     // Add optional parameters
     if (request.duration) {
@@ -87,6 +88,7 @@ export class RunwayProvider implements VideoProvider {
     }
 
     // Map aspect ratio to Runway's pixel-based ratio format
+    // Valid values: 1280:720, 720:1280, 1104:832, 832:1104, 960:960, 1584:672
     if (request.aspectRatio) {
       const ratioMap: Record<string, string> = {
         "16:9": "1280:720",
