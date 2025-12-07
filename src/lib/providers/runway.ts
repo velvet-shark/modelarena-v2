@@ -76,30 +76,22 @@ export class RunwayProvider implements VideoProvider {
       throw new Error("Runway image-to-video requires a source image");
     }
 
+    // Map aspect ratio to Runway's pixel-based ratio format
+    // Valid values: 1280:720, 720:1280, 1104:832, 832:1104, 960:960, 1584:672
+    const ratioMap: Record<string, string> = {
+      "16:9": "1280:720",
+      "9:16": "720:1280",
+      "1:1": "960:960",
+    };
+    const ratio = request.aspectRatio ? ratioMap[request.aspectRatio] || "1280:720" : "1280:720";
+
     const payload: Record<string, unknown> = {
       model: modelEndpoint,
       promptImage: request.sourceImageUrl,
       promptText: request.prompt,
+      ratio,
+      duration: request.duration || 5,
     };
-
-    // Add optional parameters
-    if (request.duration) {
-      payload.duration = request.duration;
-    }
-
-    // Map aspect ratio to Runway's pixel-based ratio format
-    // Valid values: 1280:720, 720:1280, 1104:832, 832:1104, 960:960, 1584:672
-    if (request.aspectRatio) {
-      const ratioMap: Record<string, string> = {
-        "16:9": "1280:720",
-        "9:16": "720:1280",
-        "1:1": "960:960",
-      };
-      const mappedRatio = ratioMap[request.aspectRatio];
-      if (mappedRatio) {
-        payload.ratio = mappedRatio;
-      }
-    }
 
     if (request.seed) {
       payload.seed = request.seed;
@@ -109,6 +101,8 @@ export class RunwayProvider implements VideoProvider {
     if (request.additionalParams) {
       Object.assign(payload, request.additionalParams);
     }
+
+    console.log("[runway] Sending payload:", JSON.stringify(payload, null, 2));
 
     const response = await fetch(`${this.baseUrl}/image_to_video`, {
       method: "POST",
