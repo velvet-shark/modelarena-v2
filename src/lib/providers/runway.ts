@@ -15,7 +15,7 @@ interface RunwayTaskResponse {
 export class RunwayProvider implements VideoProvider {
   name = "runway";
   private apiKey: string;
-  private baseUrl = "https://api.runwayml.com/v1";
+  private baseUrl = "https://api.dev.runwayml.com/v1";
 
   constructor() {
     const apiKey = process.env.RUNWAY_API_KEY;
