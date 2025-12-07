@@ -35,6 +35,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [type, setType] = useState<"image-to-video" | "text-to-video">("image-to-video");
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("9:16");
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [sourceImagePreview, setSourceImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -148,6 +149,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
         modelIds: selectedModels,
         isPublic,
         isFeatured,
+        aspectRatio,
       };
 
       // Create comparison
@@ -213,6 +215,30 @@ export function GenerateForm({ models }: GenerateFormProps) {
               <RadioGroupItem value="text-to-video" id="text-to-video" />
               <Label htmlFor="text-to-video" className="font-normal cursor-pointer">
                 Text-to-Video
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Aspect Ratio</Label>
+          <RadioGroup value={aspectRatio} onValueChange={(v) => setAspectRatio(v as typeof aspectRatio)}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="9:16" id="aspect-9-16" />
+              <Label htmlFor="aspect-9-16" className="font-normal cursor-pointer">
+                9:16 (portrait)
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="16:9" id="aspect-16-9" />
+              <Label htmlFor="aspect-16-9" className="font-normal cursor-pointer">
+                16:9 (landscape)
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="1:1" id="aspect-1-1" />
+              <Label htmlFor="aspect-1-1" className="font-normal cursor-pointer">
+                1:1 (square)
               </Label>
             </div>
           </RadioGroup>

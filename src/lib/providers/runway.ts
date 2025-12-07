@@ -86,6 +86,19 @@ export class RunwayProvider implements VideoProvider {
       payload.duration = request.duration;
     }
 
+    // Map aspect ratio to Runway's pixel-based ratio format
+    if (request.aspectRatio) {
+      const ratioMap: Record<string, string> = {
+        "16:9": "1280:720",
+        "9:16": "720:1280",
+        "1:1": "960:960",
+      };
+      const mappedRatio = ratioMap[request.aspectRatio];
+      if (mappedRatio) {
+        payload.ratio = mappedRatio;
+      }
+    }
+
     if (request.seed) {
       payload.seed = request.seed;
     }
