@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { PlayAllButton } from "@/components/play-all-button";
 import { VoteButton } from "@/components/vote-button";
+import { VideoDeleteButton } from "@/components/video-delete-button";
 import { AddModelsForm } from "@/components/add-models-form";
 import prisma from "@/lib/prisma";
 import { auth, isAdmin } from "@/lib/auth";
@@ -274,6 +275,9 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                       {video.cost !== null && <span title="Generation cost">💵 {formatCost(video.cost)}</span>}
                     </div>
                     <VoteButton videoId={video.id} initialVoteCount={video.voteCount} className="w-full mt-2" />
+                    {isUserAdmin && (
+                      <VideoDeleteButton videoId={video.id} modelName={video.model.name} />
+                    )}
                   </div>
                 </div>
               ))}

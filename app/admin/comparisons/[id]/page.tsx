@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { VideoRetryButton } from "@/components/video-retry-button";
+import { VideoDeleteButton } from "@/components/video-delete-button";
 import { VideoCostEditor } from "@/components/video-cost-editor";
 import { ComparisonEditForm } from "@/components/comparison-edit-form";
 import Link from "next/link";
@@ -195,6 +196,10 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                 {video.status === "FAILED" && (
                   <VideoRetryButton videoId={video.id} />
                 )}
+                <VideoDeleteButton
+                  videoId={video.id}
+                  modelName={video.model.name}
+                />
               </div>
             </div>
           ))}
