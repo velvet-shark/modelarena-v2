@@ -8,6 +8,7 @@ interface SearchParams {
   type?: string;
   tag?: string;
   q?: string;
+  sort?: string;
 }
 
 interface PageProps {
@@ -79,15 +80,33 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
           videos: true
         }
       }
-    },
-    orderBy: [
-      {
-        isFeatured: "desc"
-      },
-      {
-        createdAt: "desc"
-      }
-    ]
+    }
+  });
+
+  // Calculate total votes per comparison
+  const comparisonsWithVotes = comparisons.map((comparison) => {
+    const totalVotes = comparison.videos.reduce((sum, video) => sum + video.voteCount, 0);
+    return {
+      ...comparison,
+      totalVotes
+    };
+  });
+
+  // Sort comparisons based on sort parameter
+  const sortOption = params.sort || "votes"; // Default to votes
+  const sortedComparisons = [...comparisonsWithVotes].sort((a, b) => {
+    switch (sortOption) {
+      case "votes":
+        // Featured first, then by votes
+        if (a.isFeatured !== b.isFeatured) return b.isFeatured ? 1 : -1;
+        return b.totalVotes - a.totalVotes;
+      case "newest":
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case "oldest":
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      default:
+        return b.totalVotes - a.totalVotes;
+    }
   });
 
   // Get all tags for filter
@@ -102,6 +121,33 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
     { value: "image-to-video", label: "Image to Video" },
     { value: "text-to-video", label: "Text to Video" }
   ];
+
+  const sortOptions = [
+    { value: "votes", label: "Most Voted" },
+    { value: "newest", label: "Newest" },
+    { value: "oldest", label: "Oldest" }
+  ];
+
+  // Build URL with current params
+  const buildUrl = (newParams: Record<string, string | undefined>) => {
+    const current = new URLSearchParams();
+    if (params.type) current.set("type", params.type);
+    if (params.tag) current.set("tag", params.tag);
+    if (params.q) current.set("q", params.q);
+    if (params.sort && params.sort !== "votes") current.set("sort", params.sort);
+
+    // Apply new params
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) {
+        current.set(key, value);
+      } else {
+        current.delete(key);
+      }
+    });
+
+    const queryString = current.toString();
+    return `/comparisons${queryString ? `?${queryString}` : ""}`;
+  };
 
   return (
     <main className="min-h-screen">
@@ -151,7 +197,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
               {typeOptions.map((option) => (
                 <Link
                   key={option.value}
-                  href={`/comparisons${option.value ? `?type=${option.value}` : ""}`}
+                  href={buildUrl({ type: option.value || undefined })}
                   className={`px-4 py-2 rounded-md border text-sm transition-colors ${
                     params.type === option.value || (!params.type && option.value === "")
                       ? "bg-primary text-primary-foreground"
@@ -167,7 +213,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
             {allTags.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 <Link
-                  href="/comparisons"
+                  href={buildUrl({ tag: undefined })}
                   className={`px-4 py-2 rounded-md border text-sm transition-colors ${
                     !params.tag ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                   }`}
@@ -177,7 +223,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                 {allTags.map((tag) => (
                   <Link
                     key={tag.id}
-                    href={`/comparisons?tag=${tag.slug}`}
+                    href={buildUrl({ tag: tag.slug })}
                     className={`px-4 py-2 rounded-md border text-sm transition-colors ${
                       params.tag === tag.slug ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                     }`}
@@ -190,20 +236,41 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="flex justify-between items-center">
+        {/* Results Count & Sort */}
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <p className="text-sm text-muted-foreground">
-            {comparisons.length} comparison{comparisons.length !== 1 ? "s" : ""} found
+            {sortedComparisons.length} comparison{sortedComparisons.length !== 1 ? "s" : ""} found
           </p>
-          <Link href="/models">
-            <Button variant="ghost">View Models →</Button>
-          </Link>
+          <div className="flex items-center gap-4">
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Sort:</span>
+              <div className="flex gap-1">
+                {sortOptions.map((option) => (
+                  <Link
+                    key={option.value}
+                    href={buildUrl({ sort: option.value === "votes" ? undefined : option.value })}
+                    className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      sortOption === option.value
+                        ? "bg-primary text-primary-foreground"
+                        : "border hover:bg-muted"
+                    }`}
+                  >
+                    {option.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <Link href="/models">
+              <Button variant="ghost">View Models →</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Comparisons Grid */}
-        {comparisons.length > 0 ? (
+        {sortedComparisons.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {comparisons.map((comparison) => (
+            {sortedComparisons.map((comparison) => (
               <Link
                 key={comparison.id}
                 href={`/comparisons/${comparison.slug}`}
@@ -242,7 +309,10 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                   )}
                   <div className="flex gap-4 text-xs text-muted-foreground">
                     <span>{comparison.videos.filter((v) => v.status === "COMPLETED").length} models</span>
-                    <span className="capitalize">{comparison.type}</span>
+                    <span className="capitalize">{comparison.type.replace("-", " ")}</span>
+                    {comparison.totalVotes > 0 && (
+                      <span>👍 {comparison.totalVotes}</span>
+                    )}
                   </div>
                   {comparison.tags.length > 0 && (
                     <div className="flex gap-2 flex-wrap">

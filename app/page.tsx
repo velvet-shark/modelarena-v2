@@ -98,17 +98,17 @@ export default async function HomePage() {
             Discover how different AI models perform on the same prompts and images. Compare quality, speed, and style
             across leading video generation platforms.
           </p>
-          <div className="flex gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4">
             <Link href="/comparisons">
-              <Button size="lg">Browse Comparisons</Button>
+              <Button size="lg" className="w-full sm:w-auto">Browse Comparisons</Button>
             </Link>
             <Link href="/models">
-              <Button size="lg" variant="outline">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 View Models
               </Button>
             </Link>
             <Link href="/analytics">
-              <Button size="lg" variant="outline">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 Analytics
               </Button>
             </Link>

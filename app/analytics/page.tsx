@@ -21,6 +21,7 @@ export default async function AnalyticsPage() {
           status: true,
           generationTime: true,
           duration: true,
+          cost: true,
           voteCount: true
         }
       }
@@ -43,12 +44,19 @@ export default async function AnalyticsPage() {
           ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) / completedVideos.length
           : 0;
 
+      const videosWithCost = completedVideos.filter((v) => v.cost !== null && v.cost > 0);
+      const avgCost =
+        videosWithCost.length > 0
+          ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) / videosWithCost.length
+          : 0;
+
       const totalVotes = completedVideos.reduce((sum, v) => sum + v.voteCount, 0);
 
       return {
         modelName: model.name,
         avgGenerationTime,
         avgDuration,
+        avgCost,
         totalVideos: model.videos.length,
         completedVideos: completedVideos.length,
         failedVideos: failedVideos.length,

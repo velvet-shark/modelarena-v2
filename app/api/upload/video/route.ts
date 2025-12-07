@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
           duration: videoDuration,
           generationTime: generationTime ? parseFloat(generationTime) : null,
           cost: cost ? parseFloat(cost) : null,
-          manualMetadata: notes ? { notes } : null,
+          manualMetadata: notes ? { notes } : undefined,
         },
       });
 

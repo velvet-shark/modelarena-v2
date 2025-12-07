@@ -35,7 +35,8 @@ export function GenerateForm({ models }: GenerateFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [type, setType] = useState<"image-to-video" | "text-to-video">("image-to-video");
-  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("9:16");
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
+  const [duration, setDuration] = useState<5 | 10>(5);
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [sourceImagePreview, setSourceImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -150,6 +151,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
         isPublic,
         isFeatured,
         aspectRatio,
+        duration,
       };
 
       // Create comparison
@@ -220,28 +222,61 @@ export function GenerateForm({ models }: GenerateFormProps) {
           </RadioGroup>
         </div>
 
-        <div className="space-y-2">
-          <Label>Aspect Ratio</Label>
-          <RadioGroup value={aspectRatio} onValueChange={(v) => setAspectRatio(v as typeof aspectRatio)}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="9:16" id="aspect-9-16" />
-              <Label htmlFor="aspect-9-16" className="font-normal cursor-pointer">
-                9:16 (portrait)
-              </Label>
+        {/* Generation Settings - Prominent */}
+        <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+          <h3 className="font-semibold">Generation Settings</h3>
+
+          <div className="space-y-2">
+            <Label>Aspect Ratio</Label>
+            <div className="flex gap-2">
+              {[
+                { value: "16:9", label: "16:9", desc: "Landscape" },
+                { value: "9:16", label: "9:16", desc: "Portrait" },
+                { value: "1:1", label: "1:1", desc: "Square" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setAspectRatio(option.value as typeof aspectRatio)}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                    aspectRatio === option.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="font-semibold">{option.label}</div>
+                  <div className="text-xs text-muted-foreground">{option.desc}</div>
+                </button>
+              ))}
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="16:9" id="aspect-16-9" />
-              <Label htmlFor="aspect-16-9" className="font-normal cursor-pointer">
-                16:9 (landscape)
-              </Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Duration</Label>
+            <div className="flex gap-2">
+              {[
+                { value: 5, label: "5 seconds", desc: "Faster, cheaper" },
+                { value: 10, label: "10 seconds", desc: "Longer videos" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setDuration(option.value as typeof duration)}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                    duration === option.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="font-semibold">{option.label}</div>
+                  <div className="text-xs text-muted-foreground">{option.desc}</div>
+                </button>
+              ))}
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="1:1" id="aspect-1-1" />
-              <Label htmlFor="aspect-1-1" className="font-normal cursor-pointer">
-                1:1 (square)
-              </Label>
-            </div>
-          </RadioGroup>
+            <p className="text-xs text-muted-foreground">
+              Note: Some models may not support all durations and will use their default.
+            </p>
+          </div>
         </div>
 
         {type === "image-to-video" && (

@@ -24,9 +24,6 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { createdAt: "desc" },
       take: limit,
-      include: {
-        _count: true,
-      },
     });
 
     return NextResponse.json({ jobs });

@@ -50,15 +50,17 @@ async function main() {
     },
   });
 
-  // Create models
+  // Create models with brand and T2V endpoints
   const models = [
     // Kling
     {
       slug: "kling-2.5-turbo-standard",
       name: "Kling 2.5 Turbo Standard",
+      brand: "Kling",
       provider: falProvider,
       endpoint: "fal-ai/kling-video/v2.5-turbo/standard/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/kling-video/v2.5-turbo/standard/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "base-plus-per-second",
@@ -71,9 +73,11 @@ async function main() {
     {
       slug: "kling-2.5-turbo-pro",
       name: "Kling 2.5 Turbo Pro",
+      brand: "Kling",
       provider: falProvider,
       endpoint: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "base-plus-per-second",
@@ -86,8 +90,10 @@ async function main() {
     {
       slug: "kling-o1",
       name: "Kling AI O1",
+      brand: "Kling",
       provider: falProvider,
       endpoint: "fal-ai/kling-video/o1/image-to-video",
+      endpointT2V: null, // O1 does not support T2V
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -100,9 +106,11 @@ async function main() {
     {
       slug: "runway-gen4-turbo",
       name: "Runway Gen-4 Turbo",
+      brand: "Runway",
       provider: runwayProvider,
       endpoint: "gen4_turbo",
-      capabilities: [imageToVideo],
+      endpointT2V: "gen4_turbo", // Same endpoint, different input
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -114,8 +122,10 @@ async function main() {
     {
       slug: "veo-3.1-reference",
       name: "Veo 3.1 Reference",
+      brand: "Veo",
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/reference-to-video",
+      endpointT2V: null, // Reference-to-video only
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -128,9 +138,11 @@ async function main() {
     {
       slug: "veo-3.1-fast",
       name: "Veo 3.1 Fast",
+      brand: "Veo",
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/fast/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/veo3.1/fast",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -144,9 +156,11 @@ async function main() {
     {
       slug: "veo-3.1",
       name: "Veo 3.1",
+      brand: "Veo",
       provider: falProvider,
       endpoint: "fal-ai/veo3.1/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/veo3.1",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -162,9 +176,11 @@ async function main() {
     {
       slug: "sora-2-pro",
       name: "Sora 2 Pro",
+      brand: "Sora",
       provider: falProvider,
       endpoint: "fal-ai/sora-2/image-to-video/pro",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/sora-2/text-to-video/pro",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "resolution-dependent",
@@ -179,9 +195,11 @@ async function main() {
     {
       slug: "sora-2",
       name: "Sora 2",
+      brand: "Sora",
       provider: falProvider,
       endpoint: "fal-ai/sora-2/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/sora-2/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -193,9 +211,11 @@ async function main() {
     {
       slug: "hailuo-2.3-pro",
       name: "Hailuo 2.3 Pro",
+      brand: "Hailuo",
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3/pro/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/minimax/hailuo-02/pro/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "flat-rate",
@@ -206,9 +226,11 @@ async function main() {
     {
       slug: "hailuo-2.3-standard",
       name: "Hailuo 2.3 Standard",
+      brand: "Hailuo",
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3/standard/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/minimax/hailuo-02/standard/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "flat-rate",
@@ -219,8 +241,10 @@ async function main() {
     {
       slug: "hailuo-2.3-fast-standard",
       name: "Hailuo 2.3 Fast Standard",
+      brand: "Hailuo",
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3-fast/standard/image-to-video",
+      endpointT2V: null, // Fast variants may not have T2V
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -233,8 +257,10 @@ async function main() {
     {
       slug: "hailuo-2.3-fast-pro",
       name: "Hailuo 2.3 Fast Pro",
+      brand: "Hailuo",
       provider: falProvider,
       endpoint: "fal-ai/minimax/hailuo-2.3-fast/pro/image-to-video",
+      endpointT2V: null, // Fast variants may not have T2V
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -248,9 +274,11 @@ async function main() {
     {
       slug: "wan-2.5-preview",
       name: "Wan 2.5 Preview",
+      brand: "Wan",
       provider: falProvider,
       endpoint: "fal-ai/wan-25-preview/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/wan-25-preview/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "resolution-dependent",
@@ -267,9 +295,11 @@ async function main() {
     {
       slug: "seedance-1.0-pro-fast",
       name: "Seedance 1.0 Pro Fast",
+      brand: "Seedance",
       provider: falProvider,
       endpoint: "fal-ai/bytedance/seedance/v1/pro/fast/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/bytedance/seedance/v1/pro/fast/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -282,9 +312,11 @@ async function main() {
     {
       slug: "vidu-q2-turbo",
       name: "Vidu Q2 Turbo",
+      brand: "Vidu",
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/image-to-video/turbo",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/vidu/q2/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "per-second",
@@ -296,9 +328,11 @@ async function main() {
     {
       slug: "vidu-q2-pro",
       name: "Vidu Q2 Pro",
+      brand: "Vidu",
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/image-to-video/pro",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/vidu/q2/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "base-plus-per-second",
@@ -312,8 +346,10 @@ async function main() {
     {
       slug: "vidu-q2-reference",
       name: "Vidu Q2 Reference",
+      brand: "Vidu",
       provider: falProvider,
       endpoint: "fal-ai/vidu/q2/reference-to-video",
+      endpointT2V: null, // Reference-to-video only
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -327,9 +363,11 @@ async function main() {
     {
       slug: "luma-ray-2-flash",
       name: "Luma Ray 2 Flash",
+      brand: "Luma",
       provider: falProvider,
       endpoint: "fal-ai/luma-dream-machine/ray-2-flash/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/luma-dream-machine/ray-2-flash",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "flat-rate",
@@ -341,9 +379,11 @@ async function main() {
     {
       slug: "luma-ray-2",
       name: "Luma Ray 2",
+      brand: "Luma",
       provider: falProvider,
       endpoint: "fal-ai/luma-dream-machine/ray-2/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/luma-dream-machine/ray-2",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "flat-rate",
@@ -354,8 +394,10 @@ async function main() {
     {
       slug: "luma-ray-3",
       name: "Luma Ray 3",
+      brand: "Luma",
       provider: manualProvider,
       endpoint: null,
+      endpointT2V: null,
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -369,9 +411,11 @@ async function main() {
     {
       slug: "pika-2.2",
       name: "Pika 2.2",
+      brand: "Pika",
       provider: falProvider,
       endpoint: "fal-ai/pika/v2.2/image-to-video",
-      capabilities: [imageToVideo],
+      endpointT2V: "fal-ai/pika/v2.2/text-to-video",
+      capabilities: [imageToVideo, textToVideo],
       defaultParams: {
         pricing: {
           model: "resolution-dependent",
@@ -386,8 +430,10 @@ async function main() {
     {
       slug: "pika-2-turbo",
       name: "Pika 2 Turbo",
+      brand: "Pika",
       provider: falProvider,
       endpoint: "fal-ai/pika/v2/turbo/image-to-video",
+      endpointT2V: null, // Turbo may not have T2V
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -400,8 +446,10 @@ async function main() {
     {
       slug: "pika-2.5",
       name: "Pika 2.5",
+      brand: "Pika",
       provider: manualProvider,
       endpoint: null,
+      endpointT2V: null,
       capabilities: [imageToVideo],
       defaultParams: {
         pricing: {
@@ -417,14 +465,21 @@ async function main() {
     await prisma.model.upsert({
       where: { slug: model.slug },
       update: {
-        defaultParams: model.defaultParams,
+        brand: model.brand,
+        endpointT2V: model.endpointT2V,
+        defaultParams: model.defaultParams as any,
+        capabilities: {
+          set: model.capabilities.map((c) => ({ id: c.id })),
+        },
       },
       create: {
         slug: model.slug,
         name: model.name,
+        brand: model.brand,
         providerId: model.provider.id,
         endpoint: model.endpoint,
-        defaultParams: model.defaultParams,
+        endpointT2V: model.endpointT2V,
+        defaultParams: model.defaultParams as any,
         capabilities: {
           connect: model.capabilities.map((c) => ({ id: c.id })),
         },

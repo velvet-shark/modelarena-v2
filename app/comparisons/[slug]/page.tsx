@@ -1,16 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
-import { PlayAllButton } from "@/components/play-all-button";
-import { VoteButton } from "@/components/vote-button";
-import { VideoDeleteButton } from "@/components/video-delete-button";
+import { ComparisonSidebar } from "@/components/comparison-sidebar";
+import { ComparisonVideoGrid } from "@/components/comparison-video-grid";
 import { AddModelsForm } from "@/components/add-models-form";
-import { SourceImageViewer } from "@/components/source-image-viewer";
 import prisma from "@/lib/prisma";
 import { auth, isAdmin } from "@/lib/auth";
-import { formatCost } from "@/src/lib/format-cost";
 
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
@@ -88,7 +84,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           }
         },
         orderBy: {
-          createdAt: "asc"
+          voteCount: "desc"
         }
       },
       tags: true
@@ -140,7 +136,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Navigation */}
         <div className="flex gap-4 text-sm">
           <Link href="/" className="text-muted-foreground hover:text-foreground">
@@ -151,143 +147,88 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
             Comparisons
           </Link>
           <span className="text-muted-foreground">/</span>
-          <span>{comparison.title}</span>
+          <span className="truncate max-w-[200px]">{comparison.title}</span>
         </div>
 
-        {/* Title and Info */}
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold">{comparison.title}</h1>
-                {comparison.isFeatured && (
-                  <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded font-medium">
-                    Featured
-                  </span>
-                )}
-              </div>
-              {comparison.description && <p className="text-muted-foreground">{comparison.description}</p>}
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span>{comparison.videos.length} models compared</span>
-                <span>•</span>
-                <span className="capitalize">{comparison.type}</span>
-              </div>
-            </div>
-            <Link href="/comparisons">
-              <Button variant="outline">← Back to Browse</Button>
-            </Link>
-          </div>
-
-          {/* Tags */}
-          {comparison.tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {comparison.tags.map((tag) => (
-                <Link
-                  key={tag.id}
-                  href={`/comparisons?tag=${tag.slug}`}
-                  className="bg-muted px-3 py-1 rounded-md text-sm hover:bg-muted/80 transition-colors"
-                >
-                  {tag.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Prompt */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Prompt</h2>
-          <div className="border rounded-lg p-4 bg-muted/50">
-            <p className="text-sm whitespace-pre-wrap">{comparison.prompt}</p>
-          </div>
-        </div>
-
-        {/* Source Image */}
-        {comparison.sourceImage && (
+        {/* Title */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2">
-            <h2 className="text-lg font-semibold">Source Image</h2>
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <SourceImageViewer
-                url={comparison.sourceImage.url}
-                width={comparison.sourceImage.width}
-                height={comparison.sourceImage.height}
-                alt="Source"
-              />
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-bold">{comparison.title}</h1>
+              {comparison.isFeatured && (
+                <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded font-medium">
+                  Featured
+                </span>
+              )}
             </div>
+            {comparison.description && (
+              <p className="text-muted-foreground">{comparison.description}</p>
+            )}
+            {/* Tags */}
+            {comparison.tags.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {comparison.tags.map((tag) => (
+                  <Link
+                    key={tag.id}
+                    href={`/comparisons?tag=${tag.slug}`}
+                    className="bg-muted px-3 py-1 rounded-md text-sm hover:bg-muted/80 transition-colors"
+                  >
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Add Models (Admin Only) */}
-        {isUserAdmin && (
-          <AddModelsForm comparisonId={comparison.id} allModels={allModels} existingModelIds={existingModelIds} />
-        )}
-
-        {/* Videos */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Generated Videos</h2>
-            <p className="text-sm text-muted-foreground">
-              {comparison.videos.length} model{comparison.videos.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          {comparison.videos.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {comparison.videos.map((video) => (
-                <div key={video.id} className="border rounded-lg overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    <video
-                      src={video.url || ""}
-                      poster={video.thumbnailUrl || undefined}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <div className="space-y-1">
-                      <Link
-                        href={`/models/${video.model.slug}`}
-                        className="font-medium text-sm hover:text-primary transition-colors line-clamp-1"
-                      >
-                        {video.model.name}
-                      </Link>
-                      <div className="text-xs text-muted-foreground">{video.model.provider.displayName}</div>
-                    </div>
-                    <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-                      {video.generationTime && (
-                        <span title="Generation time">⏱ {video.generationTime.toFixed(1)}s</span>
-                      )}
-                      {video.duration && <span title="Video duration">📹 {video.duration.toFixed(1)}s</span>}
-                      {video.width && video.height && (
-                        <span title="Resolution">
-                          📐 {video.width}×{video.height}
-                        </span>
-                      )}
-                      {video.cost !== null && <span title="Generation cost">💵 {formatCost(video.cost)}</span>}
-                    </div>
-                    <VoteButton videoId={video.id} initialVoteCount={video.voteCount} className="w-full mt-2" />
-                    {isUserAdmin && (
-                      <VideoDeleteButton videoId={video.id} modelName={video.model.name} />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border rounded-lg p-12 text-center">
-              <p className="text-muted-foreground">No completed videos yet for this comparison.</p>
-            </div>
-          )}
+          <Link href="/comparisons">
+            <Button variant="outline">← Back</Button>
+          </Link>
         </div>
 
-        {/* Play All Button */}
-        {comparison.videos.length > 1 && (
-          <div className="flex justify-center">
-            <PlayAllButton />
+        {/* Main Content: Sidebar + Videos */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar */}
+          <ComparisonSidebar
+            type={comparison.type}
+            modelCount={comparison.videos.length}
+            prompt={comparison.prompt}
+            sourceImage={comparison.sourceImage}
+          />
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0 space-y-6">
+            {/* Add Models (Admin Only) */}
+            {isUserAdmin && (
+              <AddModelsForm
+                comparisonId={comparison.id}
+                allModels={allModels}
+                existingModelIds={existingModelIds}
+              />
+            )}
+
+            {/* Video Grid */}
+            <ComparisonVideoGrid
+              videos={comparison.videos.map((v) => ({
+                id: v.id,
+                url: v.url,
+                thumbnailUrl: v.thumbnailUrl,
+                generationTime: v.generationTime,
+                duration: v.duration,
+                width: v.width,
+                height: v.height,
+                cost: v.cost,
+                voteCount: v.voteCount,
+                model: {
+                  slug: v.model.slug,
+                  name: v.model.name,
+                  provider: {
+                    displayName: v.model.provider.displayName
+                  }
+                }
+              }))}
+              isAdmin={isUserAdmin}
+            />
           </div>
-        )}
+        </div>
       </div>
     </main>
   );

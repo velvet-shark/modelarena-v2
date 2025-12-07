@@ -19,7 +19,7 @@ export default function ComparisonError({
       <div className="max-w-md w-full text-center space-y-4">
         <h1 className="text-4xl font-bold text-red-600">Comparison Not Found</h1>
         <p className="text-muted-foreground">
-          The comparison you're looking for doesn't exist or couldn't be loaded.
+          The comparison you&apos;re looking for doesn&apos;t exist or couldn&apos;t be loaded.
         </p>
         {error.message && (
           <div className="bg-muted p-4 rounded-lg">

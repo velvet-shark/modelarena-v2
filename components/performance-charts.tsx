@@ -18,6 +18,7 @@ interface ModelPerformance {
   modelName: string;
   avgGenerationTime: number;
   avgDuration: number;
+  avgCost: number;
   totalVideos: number;
   completedVideos: number;
   failedVideos: number;
@@ -142,33 +143,71 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
         </div>
       )}
 
+      {/* Average Cost */}
+      {data.some((d) => d.avgCost > 0) && (
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            Average Cost per Model (Top 10 Cheapest)
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[...data]
+                .filter((d) => d.avgCost > 0)
+                .sort((a, b) => a.avgCost - b.avgCost)
+                .slice(0, 10)}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="modelName"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                fontSize={12}
+              />
+              <YAxis
+                label={{ value: "Cost ($)", angle: -90, position: "insideLeft" }}
+                tickFormatter={(value) => `$${value.toFixed(2)}`}
+              />
+              <Tooltip formatter={(value: number) => `$${value.toFixed(3)}`} />
+              <Legend />
+              <Bar dataKey="avgCost" fill="#00C49F" name="Avg Cost ($)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Video Duration */}
-      <div className="border rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">
-          Average Video Duration by Model
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={[...data]
-              .filter((d) => d.avgDuration > 0)
-              .sort((a, b) => b.avgDuration - a.avgDuration)
-              .slice(0, 10)}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="modelName"
-              angle={-45}
-              textAnchor="end"
-              height={100}
-              fontSize={12}
-            />
-            <YAxis label={{ value: "Seconds", angle: -90, position: "insideLeft" }} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="avgDuration" fill="#ff8042" name="Avg Duration (s)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {data.some((d) => d.avgDuration > 0) && (
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            Average Video Duration by Model (Top 10 Longest)
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[...data]
+                .filter((d) => d.avgDuration > 0)
+                .sort((a, b) => b.avgDuration - a.avgDuration)
+                .slice(0, 10)}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="modelName"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                fontSize={12}
+              />
+              <YAxis
+                label={{ value: "Seconds", angle: -90, position: "insideLeft" }}
+                tickFormatter={(value) => `${value.toFixed(1)}s`}
+              />
+              <Tooltip formatter={(value: number) => `${value.toFixed(1)}s`} />
+              <Legend />
+              <Bar dataKey="avgDuration" fill="#ff8042" name="Avg Duration (s)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

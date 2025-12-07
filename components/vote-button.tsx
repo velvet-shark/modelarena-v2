@@ -9,12 +9,14 @@ interface VoteButtonProps {
   videoId: string;
   initialVoteCount: number;
   className?: string;
+  showZero?: boolean;
 }
 
 export function VoteButton({
   videoId,
   initialVoteCount,
   className,
+  showZero = true,
 }: VoteButtonProps) {
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [hasVoted, setHasVoted] = useState(false);
@@ -93,6 +95,8 @@ export function VoteButton({
     }
   };
 
+  const displayCount = showZero || voteCount > 0;
+
   return (
     <Button
       onClick={handleVote}
@@ -101,8 +105,8 @@ export function VoteButton({
       size="sm"
       className={className}
     >
-      <ThumbsUp className={`h-4 w-4 mr-1 ${hasVoted ? "fill-current" : ""}`} />
-      {voteCount}
+      <ThumbsUp className={`h-4 w-4 ${displayCount ? "mr-1" : ""} ${hasVoted ? "fill-current" : ""}`} />
+      {displayCount && voteCount}
     </Button>
   );
 }

@@ -24,9 +24,11 @@ model Model {
   id            String       @id @default(cuid())
   slug          String       @unique  // "kling-2.5-turbo-pro"
   name          String       // "Kling 2.5 Turbo Pro"
+  brand         String?      // Model maker: "Kling", "Runway", "Veo", "Sora", etc.
   provider      Provider     @relation(fields: [providerId], references: [id])
   providerId    String
   endpoint      String?      // API endpoint or fal.ai model ID
+  endpointT2V   String?      // Text-to-video endpoint (if different from image-to-video)
   capabilities  Capability[] // [\"image-to-video\", \"text-to-video\"]
   isActive      Boolean      @default(true)
   costPerSecond Float?       // Estimated cost per second of video
@@ -37,6 +39,7 @@ model Model {
 
   @@index([isActive])
   @@index([providerId])
+  @@index([brand])
 }
 
 model Capability {
