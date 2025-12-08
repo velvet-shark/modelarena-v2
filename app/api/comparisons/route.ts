@@ -122,6 +122,10 @@ export async function POST(request: NextRequest) {
           sourceImageId: data.sourceImageId,
           isPublic: data.isPublic,
           isFeatured: data.isFeatured,
+          // Persist generation parameters for adding new models later
+          aspectRatio: data.aspectRatio,
+          duration: data.duration,
+          seed: data.seed,
         },
       });
 
@@ -139,9 +143,17 @@ export async function POST(request: NextRequest) {
       );
 
       // Add jobs to queue for each video
+      const isImageToVideo = data.type === "image-to-video";
       for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
         const model = models[i];
+
+        // Select correct endpoint based on generation type
+        const endpoint = isImageToVideo ? model.endpoint : model.endpointT2V;
+        if (!endpoint) {
+          console.warn(`[API] Model ${model.name} has no ${isImageToVideo ? 'I2V' : 'T2V'} endpoint, skipping`);
+          continue;
+        }
 
         await generationQueue.add("generate", {
           videoId: video.id,
@@ -149,7 +161,7 @@ export async function POST(request: NextRequest) {
           modelId: model.id,
           prompt: data.prompt,
           sourceImageUrl: sourceImage?.url,
-          modelEndpoint: model.endpoint || "",
+          modelEndpoint: endpoint,
           providerName: model.provider.name,
           duration: data.duration,
           aspectRatio: data.aspectRatio,

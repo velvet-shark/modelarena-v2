@@ -11,6 +11,8 @@ type Model = {
   id: string;
   slug: string;
   name: string;
+  endpoint: string | null;
+  endpointT2V: string | null;
   provider: {
     id: string;
     name: string;
@@ -20,12 +22,14 @@ type Model = {
 
 interface AddModelsFormProps {
   comparisonId: string;
+  comparisonType: "image-to-video" | "text-to-video";
   allModels: Model[];
   existingModelIds: string[];
 }
 
 export function AddModelsForm({
   comparisonId,
+  comparisonType,
   allModels,
   existingModelIds,
 }: AddModelsFormProps) {
@@ -36,10 +40,20 @@ export function AddModelsForm({
   const [isOpen, setIsOpen] = useState(false);
 
   const existingSet = new Set(existingModelIds);
-  const availableModels = allModels.filter((m) => !existingSet.has(m.id));
+  const isImageToVideo = comparisonType === "image-to-video";
 
-  // Group available models by provider
-  const modelsByProvider = availableModels.reduce((acc, model) => {
+  // Filter out already-added models and check if model supports this comparison type
+  const availableModels = allModels.filter((m) => !existingSet.has(m.id));
+  const compatibleModels = availableModels.filter((m) =>
+    isImageToVideo ? m.endpoint : m.endpointT2V
+  );
+
+  // Helper to check if model is compatible
+  const isModelCompatible = (model: Model) =>
+    isImageToVideo ? !!model.endpoint : !!model.endpointT2V;
+
+  // Group compatible models by provider
+  const modelsByProvider = compatibleModels.reduce((acc, model) => {
     const providerName = model.provider.displayName;
     if (!acc[providerName]) {
       acc[providerName] = [];
@@ -49,6 +63,9 @@ export function AddModelsForm({
   }, {} as Record<string, Model[]>);
 
   const toggleModel = (modelId: string) => {
+    const model = availableModels.find((m) => m.id === modelId);
+    if (!model || !isModelCompatible(model)) return;
+
     setSelectedModels((prev) =>
       prev.includes(modelId)
         ? prev.filter((id) => id !== modelId)
@@ -57,7 +74,7 @@ export function AddModelsForm({
   };
 
   const selectAll = () => {
-    setSelectedModels(availableModels.map((m) => m.id));
+    setSelectedModels(compatibleModels.map((m) => m.id));
   };
 
   const deselectAll = () => {
@@ -96,11 +113,11 @@ export function AddModelsForm({
     }
   };
 
-  if (availableModels.length === 0) {
+  if (compatibleModels.length === 0) {
     return (
       <div className="border rounded-lg p-6 bg-muted/30">
         <p className="text-sm text-muted-foreground text-center">
-          All available models have already been added to this comparison.
+          No compatible models available for {isImageToVideo ? "image-to-video" : "text-to-video"} generation.
         </p>
       </div>
     );
@@ -113,7 +130,7 @@ export function AddModelsForm({
           <div>
             <h3 className="font-medium text-sm">Add More Models</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {availableModels.length} model{availableModels.length !== 1 ? "s" : ""} available to add
+              {compatibleModels.length} {isImageToVideo ? "I2V" : "T2V"} model{compatibleModels.length !== 1 ? "s" : ""} available
             </p>
           </div>
           <Button onClick={() => setIsOpen(true)} size="sm">
@@ -137,7 +154,7 @@ export function AddModelsForm({
         <div>
           <h3 className="font-medium text-sm">Add Models to Comparison</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            {selectedModels.length} of {availableModels.length} selected
+            {selectedModels.length} of {compatibleModels.length} {isImageToVideo ? "I2V" : "T2V"} models selected
           </p>
         </div>
         <div className="flex gap-2">

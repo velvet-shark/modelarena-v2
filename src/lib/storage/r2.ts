@@ -4,6 +4,10 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import ffmpeg from "fluent-ffmpeg";
+import { tmpdir } from "os";
+import { join } from "path";
+import { writeFile, unlink } from "fs/promises";
 
 // Initialize R2 client
 const r2Client = new S3Client({
@@ -102,13 +106,84 @@ export async function downloadFile(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
-// Download and upload to R2 in one step
+// Video metadata type
+export interface VideoMetadata {
+  duration: number;
+  width: number;
+  height: number;
+}
+
+// Extract video metadata using ffprobe
+export async function extractVideoMetadata(
+  buffer: Buffer,
+  videoId: string
+): Promise<VideoMetadata | null> {
+  const tempPath = join(tmpdir(), `probe-${videoId}.mp4`);
+
+  try {
+    await writeFile(tempPath, buffer);
+
+    return await new Promise<VideoMetadata | null>((resolve) => {
+      ffmpeg.ffprobe(tempPath, (err, metadata) => {
+        if (err) {
+          console.error(`[R2] ffprobe error:`, err);
+          resolve(null);
+          return;
+        }
+
+        const videoStream = metadata.streams?.find(
+          (s) => s.codec_type === "video"
+        );
+
+        if (!videoStream) {
+          console.warn(`[R2] No video stream found in metadata`);
+          resolve(null);
+          return;
+        }
+
+        const duration = metadata.format?.duration
+          ? parseFloat(String(metadata.format.duration))
+          : null;
+        const width = videoStream.width;
+        const height = videoStream.height;
+
+        if (duration && width && height) {
+          resolve({ duration, width, height });
+        } else {
+          console.warn(`[R2] Incomplete metadata:`, {
+            duration,
+            width,
+            height,
+          });
+          resolve(null);
+        }
+      });
+    });
+  } finally {
+    await unlink(tempPath).catch(() => {});
+  }
+}
+
+// Download and upload to R2 in one step, with metadata extraction
 export async function downloadAndUploadVideo(
   sourceUrl: string,
   videoId: string
-): Promise<{ url: string; key: string; fileSize: number }> {
+): Promise<{
+  url: string;
+  key: string;
+  fileSize: number;
+  metadata: VideoMetadata | null;
+}> {
   console.log(`[R2] Downloading video from ${sourceUrl}`);
   const buffer = await downloadFile(sourceUrl);
+
+  console.log(`[R2] Extracting video metadata`);
+  const metadata = await extractVideoMetadata(buffer, videoId);
+  if (metadata) {
+    console.log(
+      `[R2] Video metadata: ${metadata.duration}s, ${metadata.width}x${metadata.height}`
+    );
+  }
 
   console.log(`[R2] Uploading video to R2 (${buffer.length} bytes)`);
   const result = await uploadVideo(buffer, `${videoId}.mp4`);
@@ -116,5 +191,6 @@ export async function downloadAndUploadVideo(
   return {
     ...result,
     fileSize: buffer.length,
+    metadata,
   };
 }

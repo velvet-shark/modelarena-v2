@@ -12,6 +12,7 @@ export function createWorker(concurrency = 5) {
     async (job: Job<GenerationJobData>) => {
       const {
         videoId,
+        modelId,
         modelEndpoint,
         providerName,
         prompt,
@@ -31,6 +32,51 @@ export function createWorker(concurrency = 5) {
           data: { status: "PROCESSING" },
         });
 
+        // Fetch model to get default params
+        const model = await prisma.model.findUnique({
+          where: { id: modelId },
+          select: {
+            defaultParams: true,
+            costPerSecond: true,
+          },
+        });
+
+        // Extract model-specific default params (i2v or t2v based on source)
+        const modelParams = model?.defaultParams as Record<string, unknown> | null;
+        const isImageToVideo = !!sourceImageUrl;
+        const modeParams = isImageToVideo
+          ? (modelParams?.i2v as Record<string, unknown> | undefined)
+          : (modelParams?.t2v as Record<string, unknown> | undefined);
+
+        // Extract top-level field mappings (imageUrlField, imageUrlIsArray, pricing, etc.)
+        const fieldMappings: Record<string, unknown> = {};
+        if (modelParams?.imageUrlField) fieldMappings.imageUrlField = modelParams.imageUrlField;
+        if (modelParams?.imageUrlIsArray) fieldMappings.imageUrlIsArray = modelParams.imageUrlIsArray;
+        if (modelParams?.pricing) fieldMappings.pricing = modelParams.pricing;
+
+        // Build final params: model defaults < job params (job params win)
+        // Include field mappings for provider to handle
+        const finalAdditionalParams = {
+          ...fieldMappings, // Field mapping config
+          ...modeParams, // Model's default params (like elements for Kling O1)
+          ...additionalParams, // Any explicit additional params
+        };
+
+        // Override aspect_ratio with comparison's setting if provided
+        if (aspectRatio) {
+          finalAdditionalParams.aspect_ratio = aspectRatio;
+        }
+
+        console.log(
+          `[Worker] Using params for ${videoId}:`,
+          JSON.stringify({
+            duration,
+            aspectRatio,
+            seed,
+            additionalParams: finalAdditionalParams,
+          })
+        );
+
         // Get provider and generate video
         const provider = getProvider(providerName);
         console.log(`[Worker] Using provider: ${provider.name}`);
@@ -41,16 +87,28 @@ export function createWorker(concurrency = 5) {
           duration,
           aspectRatio,
           seed,
-          additionalParams,
+          additionalParams: finalAdditionalParams,
         });
 
         if (result.success && result.videoUrl) {
           console.log(`[Worker] Video generated successfully, uploading to R2`);
 
-          // Download video and upload to R2
+          // Download video and upload to R2 (also extracts metadata via ffprobe)
           const r2Result = await downloadAndUploadVideo(
             result.videoUrl,
             videoId
+          );
+
+          // Use metadata from ffprobe (most reliable), then API response, then request params as fallback
+          const videoDuration =
+            r2Result.metadata?.duration ?? result.duration ?? duration ?? 0;
+          const videoWidth =
+            r2Result.metadata?.width ?? result.width ?? undefined;
+          const videoHeight =
+            r2Result.metadata?.height ?? result.height ?? undefined;
+
+          console.log(
+            `[Worker] Final video metrics: ${videoDuration}s, ${videoWidth}x${videoHeight}`
           );
 
           // Generate thumbnail
@@ -60,16 +118,7 @@ export function createWorker(concurrency = 5) {
             videoId
           );
 
-          // Fetch model to get pricing config
-          const model = await prisma.model.findUnique({
-            where: { id: job.data.modelId },
-            select: {
-              costPerSecond: true,
-              defaultParams: true,
-            },
-          });
-
-          // Extract pricing config from defaultParams
+          // Extract pricing config from defaultParams (model already fetched above)
           const pricingConfig = (model?.defaultParams as any)
             ?.pricing as PricingConfig | undefined;
 
@@ -77,11 +126,11 @@ export function createWorker(concurrency = 5) {
           const costResult = CostCalculator.calculate(
             pricingConfig,
             {
-              duration: result.duration || 0,
-              width: result.width,
-              height: result.height,
+              duration: videoDuration,
+              width: videoWidth,
+              height: videoHeight,
               hasAudio: false, // Currently all videos have no audio
-              additionalParams: additionalParams,
+              additionalParams: finalAdditionalParams,
             },
             model?.costPerSecond
           );
@@ -109,9 +158,9 @@ export function createWorker(concurrency = 5) {
               r2Key: r2Result.key,
               thumbnailUrl: thumbnailResult.url,
               thumbnailKey: thumbnailResult.key,
-              duration: result.duration,
-              width: result.width,
-              height: result.height,
+              duration: videoDuration,
+              width: videoWidth,
+              height: videoHeight,
               fileSize: r2Result.fileSize,
               generationTime: result.generationTime,
               cost: costResult.cost,

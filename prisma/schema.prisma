@@ -59,6 +59,10 @@ model Comparison {
   sourceImage   SourceImage? @relation(fields: [sourceImageId], references: [id])
   isPublic      Boolean      @default(false)
   isFeatured    Boolean      @default(false)
+  // Generation parameters (persisted for adding new models later)
+  aspectRatio   String?      // "16:9", "9:16", "1:1"
+  duration      Int?         // Duration in seconds
+  seed          Int?         // Seed for reproducibility
   videos        Video[]
   tags          Tag[]
   createdAt     DateTime     @default(now())

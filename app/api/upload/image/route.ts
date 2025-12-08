@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadImage } from "@/src/lib/storage/r2";
+import sharp from "sharp";
+
+// Maximum dimensions for uploaded images (fal.ai limit is 4000x4000)
+const MAX_DIMENSION = 3840; // 4K resolution, safely under the limit
 
 // POST /api/upload/image - Upload source image for comparisons
 export async function POST(request: NextRequest) {
@@ -42,19 +46,41 @@ export async function POST(request: NextRequest) {
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer: Buffer = Buffer.from(arrayBuffer);
 
-    // Generate unique filename
+    // Process image with sharp: resize if needed and get dimensions
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    let width = metadata.width;
+    let height = metadata.height;
+
+    // Resize if either dimension exceeds the max
+    if (width && height && (width > MAX_DIMENSION || height > MAX_DIMENSION)) {
+      console.log(`[API] Resizing image from ${width}x${height} to fit within ${MAX_DIMENSION}px`);
+
+      buffer = await image
+        .resize(MAX_DIMENSION, MAX_DIMENSION, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      // Get new dimensions
+      const resizedMetadata = await sharp(buffer).metadata();
+      width = resizedMetadata.width;
+      height = resizedMetadata.height;
+
+      console.log(`[API] Resized image to ${width}x${height}`);
+    }
+
+    // Generate unique filename (always save as jpeg after processing)
     const timestamp = Date.now();
-    const extension = file.name.split(".").pop() || "jpg";
-    const filename = `${timestamp}.${extension}`;
+    const filename = `${timestamp}.jpeg`;
 
     // Upload to R2
     const { url, key } = await uploadImage(buffer, filename);
-
-    // Get image dimensions if possible
-    let width: number | undefined;
-    let height: number | undefined;
 
     // Create source image record
     const sourceImage = await prisma.sourceImage.create({

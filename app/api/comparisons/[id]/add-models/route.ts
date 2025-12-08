@@ -92,9 +92,17 @@ export async function POST(
       );
 
       // Add jobs to queue for each video
+      const isImageToVideo = comparison.type === "image-to-video";
       for (let i = 0; i < createdVideos.length; i++) {
         const video = createdVideos[i];
         const model = models[i];
+
+        // Select correct endpoint based on generation type
+        const endpoint = isImageToVideo ? model.endpoint : model.endpointT2V;
+        if (!endpoint) {
+          console.warn(`[API] Model ${model.name} has no ${isImageToVideo ? 'I2V' : 'T2V'} endpoint, skipping`);
+          continue;
+        }
 
         await generationQueue.add("generate", {
           videoId: video.id,
@@ -102,8 +110,12 @@ export async function POST(
           modelId: model.id,
           prompt: comparison.prompt,
           sourceImageUrl: comparison.sourceImage?.url,
-          modelEndpoint: model.endpoint || "",
+          modelEndpoint: endpoint,
           providerName: model.provider.name,
+          // Use saved generation parameters from comparison
+          duration: comparison.duration ?? undefined,
+          aspectRatio: comparison.aspectRatio ?? undefined,
+          seed: comparison.seed ?? undefined,
         });
       }
 

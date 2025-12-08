@@ -200,7 +200,19 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
             {isUserAdmin && (
               <AddModelsForm
                 comparisonId={comparison.id}
-                allModels={allModels}
+                comparisonType={comparison.type as "image-to-video" | "text-to-video"}
+                allModels={allModels.map((m) => ({
+                  id: m.id,
+                  slug: m.slug,
+                  name: m.name,
+                  endpoint: m.endpoint,
+                  endpointT2V: m.endpointT2V,
+                  provider: {
+                    id: m.provider.id,
+                    name: m.provider.name,
+                    displayName: m.provider.displayName,
+                  },
+                }))}
                 existingModelIds={existingModelIds}
               />
             )}
@@ -217,6 +229,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                 height: v.height,
                 cost: v.cost,
                 voteCount: v.voteCount,
+                createdAt: v.createdAt.toISOString(),
                 model: {
                   slug: v.model.slug,
                   name: v.model.name,

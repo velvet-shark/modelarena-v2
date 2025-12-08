@@ -152,14 +152,29 @@ export class CostCalculator {
     width: number,
     height: number
   ): ResolutionTier | undefined {
+    // Normalize dimensions: use longer side as "width" for comparison
+    // This handles both horizontal and vertical videos
+    const longerSide = Math.max(width, height);
+    const shorterSide = Math.min(width, height);
+
     // Sort tiers by resolution (ascending) to find smallest matching tier
     const sorted = [...tiers].sort(
       (a, b) => a.maxWidth * a.maxHeight - b.maxWidth * b.maxHeight
     );
 
-    return sorted.find(
-      (tier) => width <= tier.maxWidth && height <= tier.maxHeight
-    );
+    const matchingTier = sorted.find((tier) => {
+      const tierLonger = Math.max(tier.maxWidth, tier.maxHeight);
+      const tierShorter = Math.min(tier.maxWidth, tier.maxHeight);
+      return longerSide <= tierLonger && shorterSide <= tierShorter;
+    });
+
+    // If no exact match, use the highest tier as fallback
+    // (video exceeds all defined resolutions, charge at highest rate)
+    if (!matchingTier && sorted.length > 0) {
+      return sorted[sorted.length - 1];
+    }
+
+    return matchingTier;
   }
 
   private static resolveAudioPricing(

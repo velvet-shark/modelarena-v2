@@ -76,6 +76,17 @@ export class RunwayProvider implements VideoProvider {
       throw new Error("Runway image-to-video requires a source image");
     }
 
+    // Extract special config fields from additionalParams before merging
+    const {
+      promptField,
+      imageUrlField,
+      imageUrlFormat,
+      aspectRatioField,
+      aspectRatioFormat,
+      pricing,
+      ...cleanParams
+    } = (request.additionalParams || {}) as Record<string, unknown>;
+
     // Map aspect ratio to Runway's pixel-based ratio format
     // Valid values: 1280:720, 720:1280, 1104:832, 832:1104, 960:960, 1584:672
     const ratioMap: Record<string, string> = {
@@ -89,17 +100,13 @@ export class RunwayProvider implements VideoProvider {
       model: modelEndpoint,
       promptImage: request.sourceImageUrl,
       promptText: request.prompt,
-      ratio,
       duration: request.duration || 5,
+      ...cleanParams, // Apply additional params first
+      ratio, // Override ratio with the correctly mapped value
     };
 
     if (request.seed) {
       payload.seed = request.seed;
-    }
-
-    // Merge additional params
-    if (request.additionalParams) {
-      Object.assign(payload, request.additionalParams);
     }
 
     console.log("[runway] Sending payload:", JSON.stringify(payload, null, 2));
