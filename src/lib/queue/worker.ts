@@ -26,6 +26,17 @@ export function createWorker(concurrency = 5) {
       console.log(`[Worker] Processing video generation for ${videoId}`);
 
       try {
+        // Check if video still exists (may have been deleted)
+        const existingVideo = await prisma.video.findUnique({
+          where: { id: videoId },
+          select: { id: true },
+        });
+
+        if (!existingVideo) {
+          console.log(`[Worker] Video ${videoId} no longer exists, skipping job`);
+          return { success: false, videoId, skipped: true };
+        }
+
         // Update video status to processing
         await prisma.video.update({
           where: { id: videoId },
@@ -193,15 +204,20 @@ export function createWorker(concurrency = 5) {
       } catch (error) {
         console.error(`[Worker] Job failed for video ${videoId}:`, error);
 
-        // Update video status to failed
-        await prisma.video.update({
-          where: { id: videoId },
-          data: {
-            status: "FAILED",
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
-        });
+        // Update video status to failed (if it still exists)
+        try {
+          await prisma.video.update({
+            where: { id: videoId },
+            data: {
+              status: "FAILED",
+              errorMessage:
+                error instanceof Error ? error.message : String(error),
+            },
+          });
+        } catch (updateError) {
+          // Video may have been deleted, ignore update error
+          console.log(`[Worker] Could not update video ${videoId} (may have been deleted)`);
+        }
 
         throw error;
       }

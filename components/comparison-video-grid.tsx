@@ -240,7 +240,9 @@ export function ComparisonVideoGrid({ videos, isAdmin }: ComparisonVideoGridProp
                   >
                     {video.model.name}
                   </Link>
-                  <p className="text-sm text-muted-foreground">via {video.model.provider.displayName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    via {video.model.provider.displayName} • {new Date(video.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
                 </div>
 
                 {/* Metrics */}

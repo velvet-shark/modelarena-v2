@@ -51,6 +51,12 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
     failed: comparison.videos.filter((v) => v.status === "FAILED"),
   };
 
+  const totalCost = comparison.videos.reduce((sum, v) => sum + (v.cost ?? 0), 0);
+  const videosWithCost = comparison.videos.filter((v) => v.cost !== null && v.cost > 0);
+  const avgCost = videosWithCost.length > 0 ? totalCost / videosWithCost.length : 0;
+  const videosWithTime = comparison.videos.filter((v) => v.generationTime !== null);
+  const avgGenTime = videosWithTime.length > 0 ? videosWithTime.reduce((sum, v) => sum + (v.generationTime ?? 0), 0) / videosWithTime.length : 0;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -99,7 +105,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       )}
 
       {/* Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <div className="border rounded-lg p-4">
           <div className="text-sm text-muted-foreground">Pending</div>
           <div className="text-2xl font-bold">{videosByStatus.pending.length}</div>
@@ -119,6 +125,18 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
         <div className="border rounded-lg p-4">
           <div className="text-sm text-muted-foreground">Failed</div>
           <div className="text-2xl font-bold">{videosByStatus.failed.length}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Total Cost</div>
+          <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Avg Cost</div>
+          <div className="text-2xl font-bold">${avgCost.toFixed(2)}</div>
+        </div>
+        <div className="border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground">Avg Gen Time</div>
+          <div className="text-2xl font-bold">{avgGenTime.toFixed(1)}s</div>
         </div>
       </div>
 
@@ -165,7 +183,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
               <div className="p-3 space-y-2">
                 <div className="font-medium text-sm">{video.model.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {video.model.provider.displayName}
+                  {video.model.provider.displayName} • {video.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </div>
                 {video.status === "COMPLETED" && (
                   <>

@@ -111,18 +111,27 @@ export class FalProvider implements VideoProvider {
     } catch (error: unknown) {
       const generationTime = (Date.now() - startTime) / 1000;
 
-      // Log validation error details if available
-      const errObj = error as { body?: { detail?: unknown[] }; status?: number };
-      if (errObj?.body?.detail) {
+      // Extract detailed error message from fal.ai response
+      const errObj = error as { body?: { detail?: Array<{ msg?: string; type?: string }> }; status?: number; message?: string };
+      let errorMessage: string;
+
+      if (errObj?.body?.detail && Array.isArray(errObj.body.detail) && errObj.body.detail.length > 0) {
+        // Extract the message and type from validation errors
+        const detail = errObj.body.detail[0];
+        const type = detail.type || "error";
+        const msg = detail.msg || "Unknown error";
+        errorMessage = `${type}: ${msg}`;
         console.error("[fal.ai] Validation error details:", JSON.stringify(errObj.body.detail, null, 2));
       } else {
+        errorMessage = error instanceof Error ? error.message : String(error);
         console.error("[fal.ai] Generation error:", error);
       }
 
       return {
         success: false,
         generationTime,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        rawResponse: errObj?.body,
       };
     }
   }

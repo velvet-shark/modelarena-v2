@@ -8,6 +8,9 @@ interface ComparisonSidebarProps {
   type: string;
   modelCount: number;
   prompt: string;
+  totalCost: number;
+  avgCost: number;
+  avgGenTime: number;
   sourceImage?: {
     url: string;
     width?: number | null;
@@ -15,7 +18,7 @@ interface ComparisonSidebarProps {
   } | null;
 }
 
-export function ComparisonSidebar({ type, modelCount, prompt, sourceImage }: ComparisonSidebarProps) {
+export function ComparisonSidebar({ type, modelCount, prompt, totalCost, avgCost, avgGenTime, sourceImage }: ComparisonSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
@@ -32,7 +35,7 @@ export function ComparisonSidebar({ type, modelCount, prompt, sourceImage }: Com
         </button>
         {isOpen && (
           <div className="p-4 space-y-4 border-t">
-            <SidebarContent type={type} modelCount={modelCount} prompt={prompt} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
+            <SidebarContent type={type} modelCount={modelCount} prompt={prompt} totalCost={totalCost} avgCost={avgCost} avgGenTime={avgGenTime} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
           </div>
         )}
       </div>
@@ -40,7 +43,7 @@ export function ComparisonSidebar({ type, modelCount, prompt, sourceImage }: Com
       {/* Desktop: Fixed Sidebar */}
       <div className="hidden lg:block w-80 flex-shrink-0">
         <div className="sticky top-6 space-y-4">
-          <SidebarContent type={type} modelCount={modelCount} prompt={prompt} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
+          <SidebarContent type={type} modelCount={modelCount} prompt={prompt} totalCost={totalCost} avgCost={avgCost} avgGenTime={avgGenTime} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
         </div>
       </div>
 
@@ -74,12 +77,18 @@ function SidebarContent({
   type,
   modelCount,
   prompt,
+  totalCost,
+  avgCost,
+  avgGenTime,
   sourceImage,
   onImageClick
 }: {
   type: string;
   modelCount: number;
   prompt: string;
+  totalCost: number;
+  avgCost: number;
+  avgGenTime: number;
   sourceImage?: { url: string; width?: number | null; height?: number | null } | null;
   onImageClick: () => void;
 }) {
@@ -116,6 +125,24 @@ function SidebarContent({
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">Models Compared</h3>
         <span className="text-2xl font-bold">{modelCount}</span>
+      </div>
+
+      {/* Total Cost */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Total Cost</h3>
+        <span className="text-2xl font-bold">${totalCost.toFixed(2)}</span>
+      </div>
+
+      {/* Average Cost */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Average Cost</h3>
+        <span className="text-2xl font-bold">${avgCost.toFixed(2)}</span>
+      </div>
+
+      {/* Average Generation Time */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Average Gen Time</h3>
+        <span className="text-2xl font-bold">{avgGenTime.toFixed(1)}s</span>
       </div>
 
       {/* Prompt */}

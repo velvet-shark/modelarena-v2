@@ -191,6 +191,15 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
             type={comparison.type}
             modelCount={comparison.videos.length}
             prompt={comparison.prompt}
+            totalCost={comparison.videos.reduce((sum, v) => sum + (v.cost ?? 0), 0)}
+            avgCost={(() => {
+              const videosWithCost = comparison.videos.filter((v) => v.cost !== null && v.cost > 0);
+              return videosWithCost.length > 0 ? videosWithCost.reduce((sum, v) => sum + (v.cost ?? 0), 0) / videosWithCost.length : 0;
+            })()}
+            avgGenTime={(() => {
+              const videosWithTime = comparison.videos.filter((v) => v.generationTime !== null);
+              return videosWithTime.length > 0 ? videosWithTime.reduce((sum, v) => sum + (v.generationTime ?? 0), 0) / videosWithTime.length : 0;
+            })()}
             sourceImage={comparison.sourceImage}
           />
 
