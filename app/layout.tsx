@@ -14,6 +14,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://modelarena.ai"),
   title: {
     default: "ModelArena - AI Video Generation Comparison",
     template: "%s | ModelArena",
