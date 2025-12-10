@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { ModelVideoGrid } from "@/components/model-video-grid";
 import prisma from "@/lib/prisma";
 import { formatCost } from "@/src/lib/format-cost";
@@ -21,31 +22,31 @@ export default async function ModelPage({ params }: ModelPageProps) {
         where: {
           status: "COMPLETED",
           comparison: {
-            isPublic: true
-          }
+            isPublic: true,
+          },
         },
         include: {
           comparison: {
             include: {
-              sourceImage: true
-            }
-          }
+              sourceImage: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: "desc"
+          createdAt: "desc",
         },
-        take: 50
+        take: 50,
       },
       _count: {
         select: {
           videos: {
             where: {
-              status: "COMPLETED"
-            }
-          }
-        }
-      }
-    }
+              status: "COMPLETED",
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!model) {
@@ -56,107 +57,121 @@ export default async function ModelPage({ params }: ModelPageProps) {
   const completedVideos = model.videos.filter((v) => v.generationTime);
   const avgGenerationTime =
     completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.generationTime || 0), 0) / completedVideos.length
+      ? completedVideos.reduce((sum, v) => sum + (v.generationTime || 0), 0) /
+        completedVideos.length
       : null;
 
   const avgDuration =
     completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) / completedVideos.length
+      ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) /
+        completedVideos.length
       : null;
 
   const videosWithCost = model.videos.filter((v) => v.cost !== null);
   const avgCost =
     videosWithCost.length > 0
-      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) / videosWithCost.length
+      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) /
+        videosWithCost.length
       : null;
 
   return (
     <main className="min-h-screen">
-      {/* Header */}
-      <div className="border-b">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <Link href="/">
-                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
-              </Link>
-              <p className="text-muted-foreground">Model Details</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Header />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Navigation */}
-        <div className="flex gap-4 text-sm">
-          <Link href="/" className="text-muted-foreground hover:text-foreground">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground transition-colors">
             Home
           </Link>
-          <span className="text-muted-foreground">/</span>
-          <Link href="/models" className="text-muted-foreground hover:text-foreground">
+          <span>/</span>
+          <Link
+            href="/models"
+            className="hover:text-foreground transition-colors"
+          >
             Models
           </Link>
-          <span className="text-muted-foreground">/</span>
-          <span>{model.name}</span>
-        </div>
+          <span>/</span>
+          <span className="text-foreground">{model.name}</span>
+        </nav>
 
-        {/* Model Info */}
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold">{model.name}</h1>
-              <p className="text-muted-foreground">Provider: {model.provider.displayName}</p>
-              {model.capabilities.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {model.capabilities.map((cap) => (
-                    <span key={cap.id} className="bg-muted px-3 py-1 rounded-md text-sm">
-                      {cap.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <Link href="/models">
-              <Button variant="outline">← Back to Models</Button>
-            </Link>
+        {/* Model Header */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-3">
+            <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight">
+              {model.name}
+            </h1>
+            <p className="text-muted-foreground">
+              via {model.provider.displayName}
+            </p>
+            {model.capabilities.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {model.capabilities.map((cap) => (
+                  <span
+                    key={cap.id}
+                    className="bg-muted px-3 py-1 rounded-full text-sm"
+                  >
+                    {cap.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+          <Link
+            href="/models"
+            className="inline-flex items-center px-4 py-2 rounded-full border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            ← Back
+          </Link>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border rounded-lg p-4">
+          <div className="rounded-xl border bg-card p-5">
             <div className="text-sm text-muted-foreground">Total Videos</div>
-            <div className="text-2xl font-bold">{model._count.videos}</div>
+            <div className="font-display text-3xl font-bold mt-1">
+              {model._count.videos}
+            </div>
           </div>
-          <div className="border rounded-lg p-4">
+          <div className="rounded-xl border bg-card p-5">
             <div className="text-sm text-muted-foreground">Public Videos</div>
-            <div className="text-2xl font-bold">{model.videos.length}</div>
+            <div className="font-display text-3xl font-bold mt-1">
+              {model.videos.length}
+            </div>
           </div>
           {avgGenerationTime && (
-            <div className="border rounded-lg p-4">
+            <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Gen Time</div>
-              <div className="text-2xl font-bold">{avgGenerationTime.toFixed(1)}s</div>
+              <div className="font-display text-3xl font-bold mt-1">
+                {avgGenerationTime.toFixed(1)}s
+              </div>
             </div>
           )}
           {avgDuration && (
-            <div className="border rounded-lg p-4">
+            <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Duration</div>
-              <div className="text-2xl font-bold">{avgDuration.toFixed(1)}s</div>
+              <div className="font-display text-3xl font-bold mt-1">
+                {avgDuration.toFixed(1)}s
+              </div>
             </div>
           )}
           {avgCost !== null && (
-            <div className="border rounded-lg p-4">
+            <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Cost</div>
-              <div className="text-2xl font-bold">{formatCost(avgCost)}</div>
+              <div className="font-display text-3xl font-bold mt-1">
+                {formatCost(avgCost)}
+              </div>
             </div>
           )}
         </div>
 
         {/* Videos */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Recent Videos</h2>
+        <section className="space-y-6">
+          <h2 className="font-display text-2xl font-bold">Recent Videos</h2>
           <ModelVideoGrid videos={model.videos} />
-        </div>
+        </section>
+
+        <Footer />
       </div>
     </main>
   );

@@ -1,137 +1,192 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { HomeMasonryGallery } from "@/components/home-masonry-gallery";
+import { ComparisonCard } from "@/components/comparison-card";
 import prisma from "@/lib/prisma";
 
 export default async function HomePage() {
-
-  // Get public comparisons
+  // Get public comparisons with their videos
   const comparisons = await prisma.comparison.findMany({
     where: {
-      isPublic: true
+      isPublic: true,
     },
     include: {
       sourceImage: true,
       videos: {
         where: {
-          status: "COMPLETED"
+          status: "COMPLETED",
         },
         include: {
-          model: true
+          model: {
+            include: {
+              provider: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: "asc"
-        }
+          voteCount: "desc",
+        },
       },
-      _count: {
-        select: {
-          videos: true
-        }
-      }
     },
-    orderBy: {
-      createdAt: "desc"
-    },
-    take: 6
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    take: 50,
   });
+
+  // Flatten to get all videos with their comparison context
+  const allVideos = comparisons.flatMap((comparison) =>
+    comparison.videos.map((video) => ({
+      id: video.id,
+      url: video.url,
+      thumbnailUrl: video.thumbnailUrl,
+      width: video.width,
+      height: video.height,
+      voteCount: video.voteCount,
+      comparison: {
+        slug: comparison.slug,
+        title: comparison.title,
+      },
+      model: {
+        name: video.model.name,
+        slug: video.model.slug,
+      },
+    }))
+  );
+
+  // Get stats
+  const modelCount = await prisma.model.count({
+    where: {
+      isActive: true,
+      videos: {
+        some: {
+          status: "COMPLETED",
+          comparison: { isPublic: true },
+        },
+      },
+    },
+  });
+
+  const comparisonCount = await prisma.comparison.count({
+    where: { isPublic: true },
+  });
+
+  // Get latest 6 comparisons for the "Latest Comparisons" section
+  const latestComparisons = await prisma.comparison.findMany({
+    where: { isPublic: true },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    include: {
+      sourceImage: true,
+      videos: {
+        where: { status: "COMPLETED" },
+        include: { model: true },
+        orderBy: { voteCount: "desc" },
+      },
+      tags: true,
+    },
+  });
+
+  // Calculate totalVotes for each comparison
+  const latestComparisonsWithVotes = latestComparisons.map((comparison) => ({
+    ...comparison,
+    totalVotes: comparison.videos.reduce((sum, v) => sum + v.voteCount, 0),
+  }));
 
   return (
     <main className="min-h-screen">
-      {/* Header */}
-      <div className="border-b">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex justify-between items-center">
-            <Link href="/">
-              <img src="/logo.svg" alt="ModelArena" className="h-6" />
-            </Link>
-          </div>
-        </div>
-      </div>
+      <Header />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-12">
-        {/* Hero Section */}
-        <div className="text-center space-y-4 py-8">
-          <h2 className="text-3xl font-bold">Compare AI Video Generation Models</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Discover how different AI models perform on the same prompts and images. Compare quality, speed, and style
-            across leading video generation platforms.
+      {/* Hero */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="max-w-3xl">
+          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
+            Compare AI
+            <br />
+            Video Models
+          </h1>
+          <p className="mt-6 text-lg text-muted-foreground max-w-xl">
+            See how different AI models perform on identical prompts. Compare
+            quality, speed, and style across leading video generation platforms.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4">
-            <Link href="/comparisons">
-              <Button size="lg" className="w-full sm:w-auto">Browse Comparisons</Button>
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Link
+              href="/comparisons"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors"
+            >
+              Browse Comparisons
             </Link>
-            <Link href="/models">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                View Models
-              </Button>
-            </Link>
-            <Link href="/analytics">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Analytics
-              </Button>
+            <Link
+              href="/models"
+              className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-medium hover:bg-muted transition-colors"
+            >
+              View All Models
             </Link>
           </div>
+          <div className="mt-12 flex gap-12">
+            <div>
+              <div className="font-display text-3xl font-bold">{modelCount}</div>
+              <div className="text-sm text-muted-foreground">AI Models</div>
+            </div>
+            <div>
+              <div className="font-display text-3xl font-bold">{comparisonCount}</div>
+              <div className="text-sm text-muted-foreground">Comparisons</div>
+            </div>
+            <div>
+              <div className="font-display text-3xl font-bold">{allVideos.length}</div>
+              <div className="text-sm text-muted-foreground">Videos</div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        {/* Comparisons */}
-        {comparisons.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Comparisons</h2>
-              <Link href="/comparisons">
-                <Button variant="ghost">View All →</Button>
+      {/* Latest Comparisons */}
+      {latestComparisonsWithVotes.length > 0 && (
+        <section className="max-w-7xl mx-auto px-6 pb-16">
+          <div className="flex items-baseline justify-between mb-8">
+            <h2 className="font-display text-2xl font-bold">Latest Comparisons</h2>
+            <Link
+              href="/comparisons"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="masonry masonry-md-3 masonry-lg-4">
+            {latestComparisonsWithVotes.map((comparison) => (
+              <ComparisonCard key={comparison.id} comparison={comparison} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Video Gallery */}
+      {allVideos.length > 0 && (
+        <section className="pb-20">
+          <div className="max-w-7xl mx-auto px-6 mb-8">
+            <div className="flex items-baseline justify-between">
+              <h2 className="font-display text-2xl font-bold">Latest Videos</h2>
+              <Link
+                href="/comparisons"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all comparisons →
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {comparisons.map((comparison) => (
-                <Link
-                  key={comparison.id}
-                  href={`/comparisons/${comparison.slug}`}
-                  className="group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  <div className="aspect-video bg-muted relative">
-                    {comparison.videos[0]?.thumbnailUrl ? (
-                      <img
-                        src={comparison.videos[0].thumbnailUrl}
-                        alt={comparison.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : comparison.sourceImage ? (
-                      <img
-                        src={comparison.sourceImage.url}
-                        alt={comparison.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <span className="text-muted-foreground">No preview</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="font-semibold group-hover:text-primary transition-colors line-clamp-1">
-                      {comparison.title}
-                    </h3>
-                    {comparison.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{comparison.description}</p>
-                    )}
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span>{comparison.videos.filter((v) => v.status === "COMPLETED").length} models</span>
-                      <span className="capitalize">{comparison.type}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
           </div>
-        )}
+          <HomeMasonryGallery videos={allVideos} />
+        </section>
+      )}
 
-        {/* Empty State */}
-        {comparisons.length === 0 && (
-          <div className="border rounded-lg p-12 text-center">
-            <p className="text-muted-foreground">No public comparisons yet.</p>
+      {/* Empty State */}
+      {allVideos.length === 0 && (
+        <section className="max-w-7xl mx-auto px-6 pb-20">
+          <div className="rounded-2xl bg-muted/50 p-16 text-center">
+            <p className="text-muted-foreground">No videos yet.</p>
           </div>
-        )}
-      </div>
+        </section>
+      )}
+
+      <Footer />
     </main>
   );
 }

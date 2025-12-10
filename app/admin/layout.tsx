@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="flex justify-between h-16 items-center">
             <div className="flex gap-8">
               <Link href="/admin" className="flex items-center gap-2">
-                <img src="/logo.svg" alt="ModelArena" className="h-6" />
+                <img src="/ModelArena-logo.svg" alt="ModelArena" className="h-6" />
                 <span className="font-bold text-lg">Admin</span>
               </Link>
               <div className="flex gap-4 items-center">

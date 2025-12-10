@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { formatCost } from "@/src/lib/format-cost";
 
 interface ComparisonSidebarProps {
   type: string;
@@ -18,53 +19,83 @@ interface ComparisonSidebarProps {
   } | null;
 }
 
-export function ComparisonSidebar({ type, modelCount, prompt, totalCost, avgCost, avgGenTime, sourceImage }: ComparisonSidebarProps) {
+export function ComparisonSidebar({
+  type,
+  modelCount,
+  prompt,
+  totalCost,
+  avgCost,
+  avgGenTime,
+  sourceImage
+}: ComparisonSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   return (
     <>
       {/* Mobile: Collapsible Accordion */}
-      <div className="lg:hidden border rounded-lg overflow-hidden">
+      <div className="lg:hidden rounded-xl border bg-card overflow-hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
         >
-          <span className="font-semibold">Comparison Details</span>
-          {isOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          <span className="font-semibold">Details</span>
+          {isOpen ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
         </button>
         {isOpen && (
-          <div className="p-4 space-y-4 border-t">
-            <SidebarContent type={type} modelCount={modelCount} prompt={prompt} totalCost={totalCost} avgCost={avgCost} avgGenTime={avgGenTime} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
+          <div className="p-4 pt-0 space-y-5">
+            <SidebarContent
+              type={type}
+              modelCount={modelCount}
+              prompt={prompt}
+              totalCost={totalCost}
+              avgCost={avgCost}
+              avgGenTime={avgGenTime}
+              sourceImage={sourceImage}
+              onImageClick={() => setIsImageModalOpen(true)}
+            />
           </div>
         )}
       </div>
 
       {/* Desktop: Fixed Sidebar */}
       <div className="hidden lg:block w-80 flex-shrink-0">
-        <div className="sticky top-6 space-y-4">
-          <SidebarContent type={type} modelCount={modelCount} prompt={prompt} totalCost={totalCost} avgCost={avgCost} avgGenTime={avgGenTime} sourceImage={sourceImage} onImageClick={() => setIsImageModalOpen(true)} />
+        <div className="sticky top-24 space-y-5">
+          <SidebarContent
+            type={type}
+            modelCount={modelCount}
+            prompt={prompt}
+            totalCost={totalCost}
+            avgCost={avgCost}
+            avgGenTime={avgGenTime}
+            sourceImage={sourceImage}
+            onImageClick={() => setIsImageModalOpen(true)}
+          />
         </div>
       </div>
 
       {/* Image Modal */}
       {isImageModalOpen && sourceImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsImageModalOpen(false)}
         >
           <button
             onClick={() => setIsImageModalOpen(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
           >
-            <X className="h-8 w-8" />
+            <X className="h-6 w-6 text-white" />
           </button>
           <Image
             src={sourceImage.url}
             alt="Source image"
             width={sourceImage.width || 1920}
             height={sourceImage.height || 1080}
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            className="max-w-full max-h-[90vh] object-contain rounded-xl"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -89,7 +120,11 @@ function SidebarContent({
   totalCost: number;
   avgCost: number;
   avgGenTime: number;
-  sourceImage?: { url: string; width?: number | null; height?: number | null } | null;
+  sourceImage?: {
+    url: string;
+    width?: number | null;
+    height?: number | null;
+  } | null;
   onImageClick: () => void;
 }) {
   return (
@@ -100,7 +135,7 @@ function SidebarContent({
           <h3 className="text-sm font-medium text-muted-foreground">Source Image</h3>
           <button
             onClick={onImageClick}
-            className="border rounded-lg overflow-hidden bg-muted w-full cursor-zoom-in hover:opacity-90 transition-opacity"
+            className="rounded-xl overflow-hidden w-full cursor-zoom-in hover:opacity-90 transition-opacity"
           >
             <Image
               src={sourceImage.url}
@@ -113,44 +148,41 @@ function SidebarContent({
         </div>
       )}
 
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-muted/50 p-4">
+          <div className="text-xs text-muted-foreground">Models</div>
+          <div className="font-display text-2xl font-bold mt-1">{modelCount}</div>
+        </div>
+        <div className="rounded-xl bg-muted/50 p-4">
+          <div className="text-xs text-muted-foreground">Avg Time</div>
+          <div className="font-display text-2xl font-bold mt-1">{avgGenTime.toFixed(0)}s</div>
+        </div>
+        <div className="rounded-xl bg-muted/50 p-4">
+          <div className="text-xs text-muted-foreground">Total Cost</div>
+          <div className="font-display text-2xl font-bold mt-1">{formatCost(totalCost)}</div>
+        </div>
+        <div className="rounded-xl bg-muted/50 p-4">
+          <div className="text-xs text-muted-foreground">Avg Cost</div>
+          <div className="font-display text-2xl font-bold mt-1">{formatCost(avgCost)}</div>
+        </div>
+      </div>
+
       {/* Type Badge */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Generation Type</h3>
-        <span className="inline-block px-3 py-1.5 bg-primary/10 text-primary rounded-md text-sm font-medium capitalize">
+        <h3 className="text-sm font-medium text-muted-foreground">Type</h3>
+        <span className="inline-block px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-sm font-medium capitalize">
           {type.replace("-", " → ")}
         </span>
-      </div>
-
-      {/* Model Count */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Models Compared</h3>
-        <span className="text-2xl font-bold">{modelCount}</span>
-      </div>
-
-      {/* Total Cost */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Total Cost</h3>
-        <span className="text-2xl font-bold">${totalCost.toFixed(2)}</span>
-      </div>
-
-      {/* Average Cost */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Average Cost</h3>
-        <span className="text-2xl font-bold">${avgCost.toFixed(2)}</span>
-      </div>
-
-      {/* Average Generation Time */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Average Gen Time</h3>
-        <span className="text-2xl font-bold">{avgGenTime.toFixed(1)}s</span>
       </div>
 
       {/* Prompt */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">Prompt</h3>
-        <div className="border rounded-lg p-3 bg-muted/30 max-h-64 overflow-y-auto">
-          <p className="text-sm whitespace-pre-wrap">{prompt}</p>
-        </div>
+        <blockquote className="relative pl-4 border-l-2 border-[#28A2DD]">
+          <span className="absolute left-2 -top-2 text-4xl text-[#28A2DD]/30 font-serif">"</span>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed italic text-foreground/90 pt-2">{prompt}</p>
+        </blockquote>
       </div>
     </>
   );

@@ -1,20 +1,20 @@
 import Link from "next/link";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import prisma from "@/lib/prisma";
 
 export default async function ModelsPage() {
-
   const models = await prisma.model.findMany({
     where: {
       isActive: true,
-      // Only show models with at least 1 completed public video
       videos: {
         some: {
           status: "COMPLETED",
           comparison: {
-            isPublic: true
-          }
-        }
-      }
+            isPublic: true,
+          },
+        },
+      },
     },
     include: {
       provider: true,
@@ -25,19 +25,19 @@ export default async function ModelsPage() {
             where: {
               status: "COMPLETED",
               comparison: {
-                isPublic: true
-              }
-            }
-          }
-        }
-      }
+                isPublic: true,
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: {
-      name: "asc"
-    }
+      name: "asc",
+    },
   });
 
-  // Group models by brand (fallback to provider name if no brand)
+  // Group models by brand
   const modelsByBrand = models.reduce((acc, model) => {
     const brandName = model.brand || model.provider.displayName;
     if (!acc[brandName]) {
@@ -47,69 +47,64 @@ export default async function ModelsPage() {
     return acc;
   }, {} as Record<string, typeof models>);
 
-  // Sort brands alphabetically
   const sortedBrands = Object.keys(modelsByBrand).sort();
 
   return (
     <main className="min-h-screen">
-      {/* Header */}
-      <div className="border-b">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <Link href="/">
-                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
-              </Link>
-              <p className="text-muted-foreground">Browse Models</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Header />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Navigation */}
-        <div className="flex gap-4 text-sm">
-          <Link href="/" className="text-muted-foreground hover:text-foreground">
-            Home
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <span>Models</span>
-        </div>
-
-        {/* Header */}
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold">AI Video Generation Models</h2>
-          <p className="text-muted-foreground">
-            Explore {models.length} models across {sortedBrands.length} brands with generated videos.
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+        {/* Page Header */}
+        <div className="max-w-2xl">
+          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight">
+            Models
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Explore {models.length} AI video generation models across{" "}
+            {sortedBrands.length} brands.
           </p>
         </div>
 
         {/* Models by Brand */}
-        <div className="space-y-8">
+        <div className="space-y-12">
           {sortedBrands.map((brandName) => {
             const brandModels = modelsByBrand[brandName];
             return (
-              <div key={brandName} className="space-y-4">
-                <h3 className="text-xl font-semibold border-b pb-2">
-                  {brandName} ({brandModels.length})
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <section key={brandName} className="space-y-6">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-display text-2xl font-bold">
+                    {brandName}
+                  </h2>
+                  <span className="text-muted-foreground">
+                    {brandModels.length} model
+                    {brandModels.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {brandModels.map((model) => (
                     <Link
                       key={model.id}
                       href={`/models/${model.slug}`}
-                      className="group border rounded-lg p-4 hover:shadow-lg transition-shadow space-y-3"
+                      className="group block rounded-xl border bg-card p-5 hover:shadow-lg transition-shadow space-y-4"
                     >
                       <div className="space-y-1">
-                        <h4 className="font-semibold group-hover:text-primary transition-colors">{model.name}</h4>
-                        <p className="text-xs text-muted-foreground">via {model.provider.displayName}</p>
+                        <h3 className="font-semibold group-hover:text-primary transition-colors">
+                          {model.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          via {model.provider.displayName}
+                        </p>
                       </div>
 
                       {/* Capabilities */}
                       {model.capabilities.length > 0 && (
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex gap-1.5 flex-wrap">
                           {model.capabilities.map((cap) => (
-                            <span key={cap.id} className="text-xs bg-muted px-2 py-1 rounded">
+                            <span
+                              key={cap.id}
+                              className="text-xs bg-muted px-2 py-0.5 rounded-full"
+                            >
                               {cap.name}
                             </span>
                           ))}
@@ -117,24 +112,31 @@ export default async function ModelsPage() {
                       )}
 
                       {/* Stats */}
-                      <div className="flex gap-4 text-xs text-muted-foreground">
-                        <span title="Completed videos">📹 {model._count.videos} videos</span>
+                      <div className="text-sm text-muted-foreground">
+                        {model._count.videos} video
+                        {model._count.videos !== 1 ? "s" : ""}
                       </div>
                     </Link>
                   ))}
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>
 
         {/* Empty State */}
         {models.length === 0 && (
-          <div className="border rounded-lg p-12 text-center">
-            <p className="text-muted-foreground">No models with generated videos yet.</p>
-            <p className="text-sm text-muted-foreground mt-2">Models will appear here once comparisons are created.</p>
+          <div className="rounded-2xl bg-muted/50 p-16 text-center">
+            <p className="text-muted-foreground">
+              No models with generated videos yet.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Models will appear here once comparisons are created.
+            </p>
           </div>
         )}
+
+        <Footer />
       </div>
     </main>
   );

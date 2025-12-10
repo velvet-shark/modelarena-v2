@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
 
 export default async function TagsPage() {
-
   const tags = await prisma.tag.findMany({
     include: {
       _count: {
@@ -32,7 +31,7 @@ export default async function TagsPage() {
           <div className="flex justify-between items-center">
             <div>
               <Link href="/">
-                <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
+                <img src="/ModelArena-logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Browse by Tags</p>
             </div>
