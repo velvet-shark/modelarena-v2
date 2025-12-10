@@ -4,9 +4,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { ComparisonSidebar } from "@/components/comparison-sidebar";
 import { ComparisonVideoGrid } from "@/components/comparison-video-grid";
-import { AddModelsForm } from "@/components/add-models-form";
 import prisma from "@/lib/prisma";
-import { auth, isAdmin } from "@/lib/auth";
 
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
@@ -65,8 +63,6 @@ export async function generateMetadata({ params }: ComparisonPageProps): Promise
 
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { slug } = await params;
-  const session = await auth();
-  const isUserAdmin = session?.user?.email ? isAdmin(session.user.email) : false;
 
   const comparison = await prisma.comparison.findUnique({
     where: { slug },
@@ -95,21 +91,6 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
     notFound();
   }
 
-  // Fetch all models for admin to add more
-  const allModels = isUserAdmin
-    ? await prisma.model.findMany({
-        where: { isActive: true },
-        include: {
-          provider: true
-        },
-        orderBy: {
-          name: "asc"
-        }
-      })
-    : [];
-
-  const existingModelIds = comparison.videos.map((v) => v.modelId);
-
   return (
     <main className="min-h-screen">
       {/* Header */}
@@ -121,16 +102,6 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                 <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Comparison Details</p>
-            </div>
-            <div className="flex gap-4">
-              {session?.user ? (
-                <>
-                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
-                  <Link href="/admin">
-                    <Button>Admin Panel</Button>
-                  </Link>
-                </>
-              ) : null}
             </div>
           </div>
         </div>
@@ -205,27 +176,6 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0 space-y-6">
-            {/* Add Models (Admin Only) */}
-            {isUserAdmin && (
-              <AddModelsForm
-                comparisonId={comparison.id}
-                comparisonType={comparison.type as "image-to-video" | "text-to-video"}
-                allModels={allModels.map((m) => ({
-                  id: m.id,
-                  slug: m.slug,
-                  name: m.name,
-                  endpoint: m.endpoint,
-                  endpointT2V: m.endpointT2V,
-                  provider: {
-                    id: m.provider.id,
-                    name: m.provider.name,
-                    displayName: m.provider.displayName,
-                  },
-                }))}
-                existingModelIds={existingModelIds}
-              />
-            )}
-
             {/* Video Grid */}
             <ComparisonVideoGrid
               videos={comparison.videos.map((v) => ({
@@ -247,7 +197,6 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                   }
                 }
               }))}
-              isAdmin={isUserAdmin}
             />
           </div>
         </div>

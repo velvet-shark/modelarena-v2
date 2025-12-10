@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModelVideoGrid } from "@/components/model-video-grid";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { formatCost } from "@/src/lib/format-cost";
 
 interface ModelPageProps {
@@ -12,7 +11,6 @@ interface ModelPageProps {
 
 export default async function ModelPage({ params }: ModelPageProps) {
   const { slug } = await params;
-  const session = await auth();
 
   const model = await prisma.model.findUnique({
     where: { slug },
@@ -83,16 +81,6 @@ export default async function ModelPage({ params }: ModelPageProps) {
                 <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Model Details</p>
-            </div>
-            <div className="flex gap-4">
-              {session?.user ? (
-                <>
-                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
-                  <Link href="/admin">
-                    <Button>Admin Panel</Button>
-                  </Link>
-                </>
-              ) : null}
             </div>
           </div>
         </div>

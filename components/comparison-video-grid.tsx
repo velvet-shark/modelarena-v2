@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Play, Pause, TrendingDown, TrendingUp, Zap, Clock, ThumbsUp, Maximize2, X, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VoteButton } from "@/components/vote-button";
-import { VideoDeleteButton } from "@/components/video-delete-button";
 import { formatCost } from "@/src/lib/format-cost";
 import { Dialog, DialogPortal, DialogOverlay, DialogClose } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -34,7 +33,6 @@ type SortOption = "votes" | "latest" | "cheapest" | "expensive" | "fastest" | "s
 
 interface ComparisonVideoGridProps {
   videos: Video[];
-  isAdmin: boolean;
 }
 
 // Helper to determine if video is vertical based on dimensions
@@ -56,7 +54,7 @@ function getAspectRatioClass(video: Video): string {
   return "aspect-video"; // Default to 16:9
 }
 
-export function ComparisonVideoGrid({ videos, isAdmin }: ComparisonVideoGridProps) {
+export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   const [sortBy, setSortBy] = useState<SortOption>("votes");
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -257,9 +255,6 @@ export function ComparisonVideoGrid({ videos, isAdmin }: ComparisonVideoGridProp
 
                 {/* Vote Button */}
                 <VoteButton videoId={video.id} initialVoteCount={video.voteCount} showZero={false} className="w-full" />
-
-                {/* Admin: Delete Button */}
-                {isAdmin && <VideoDeleteButton videoId={video.id} modelName={video.model.name} />}
               </div>
             </div>
           ))}

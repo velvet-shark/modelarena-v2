@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 
 export default async function ModelsPage() {
-  const session = await auth();
 
   const models = await prisma.model.findMany({
     where: {
@@ -64,16 +61,6 @@ export default async function ModelsPage() {
                 <img src="/logo.svg" alt="ModelArena" className="h-6 mb-2" />
               </Link>
               <p className="text-muted-foreground">Browse Models</p>
-            </div>
-            <div className="flex gap-4">
-              {session?.user ? (
-                <>
-                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
-                  <Link href="/admin">
-                    <Button>Admin Panel</Button>
-                  </Link>
-                </>
-              ) : null}
             </div>
           </div>
         </div>

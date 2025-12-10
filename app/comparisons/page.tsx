@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ComparisonSearch } from "@/components/comparison-search";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 
 interface SearchParams {
   type?: string;
@@ -17,7 +16,6 @@ interface PageProps {
 
 export default async function ComparisonsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const session = await auth();
 
   // Build where clause based on filters
   const whereClause: any = {
@@ -161,16 +159,6 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
               </Link>
               <p className="text-muted-foreground">Browse Comparisons</p>
             </div>
-            <div className="flex gap-4">
-              {session?.user ? (
-                <>
-                  <span className="text-sm text-muted-foreground self-center">{session.user.email}</span>
-                  <Link href="/admin">
-                    <Button>Admin Panel</Button>
-                  </Link>
-                </>
-              ) : null}
-            </div>
           </div>
         </div>
       </div>
@@ -276,11 +264,6 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
                 href={`/comparisons/${comparison.slug}`}
                 className="group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
               >
-                {comparison.isFeatured && (
-                  <div className="bg-primary text-primary-foreground text-xs px-3 py-1 text-center font-medium">
-                    Featured
-                  </div>
-                )}
                 <div className="aspect-video bg-muted relative">
                   {comparison.videos[0]?.thumbnailUrl ? (
                     <img

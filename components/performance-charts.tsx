@@ -9,9 +9,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 
 interface ModelPerformance {
@@ -29,33 +26,17 @@ interface PerformanceChartsProps {
   data: ModelPerformance[];
 }
 
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884D8",
-  "#82CA9D",
-  "#FFC658",
-  "#FF6B9D",
-];
-
 export function PerformanceCharts({ data }: PerformanceChartsProps) {
-  // Sort by generation time for the first chart
-  const genTimeData = [...data]
+  // Sort by generation time (fastest first)
+  const genTimeFastestData = [...data]
     .filter((d) => d.avgGenerationTime > 0)
     .sort((a, b) => a.avgGenerationTime - b.avgGenerationTime)
     .slice(0, 10);
 
-  // Calculate success rate
-  const successRateData = data
-    .filter((d) => d.totalVideos > 0)
-    .map((d) => ({
-      name: d.modelName,
-      successRate: (d.completedVideos / d.totalVideos) * 100,
-      total: d.totalVideos,
-    }))
-    .sort((a, b) => b.successRate - a.successRate)
+  // Sort by generation time (slowest first)
+  const genTimeSlowestData = [...data]
+    .filter((d) => d.avgGenerationTime > 0)
+    .sort((a, b) => b.avgGenerationTime - a.avgGenerationTime)
     .slice(0, 10);
 
   // Sort by votes for leaderboard
@@ -66,13 +47,13 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
 
   return (
     <div className="space-y-8">
-      {/* Average Generation Time */}
+      {/* Average Generation Time - Fastest */}
       <div className="border rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4">
           Average Generation Time (Top 10 Fastest)
         </h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={genTimeData}>
+          <BarChart data={genTimeFastestData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="modelName"
@@ -89,31 +70,25 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
         </ResponsiveContainer>
       </div>
 
-      {/* Success Rate */}
+      {/* Average Generation Time - Slowest */}
       <div className="border rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4">
-          Success Rate by Model (Top 10)
+          Average Generation Time (Top 10 Slowest)
         </h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={successRateData}>
+          <BarChart data={genTimeSlowestData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="name"
+              dataKey="modelName"
               angle={-45}
               textAnchor="end"
               height={100}
               fontSize={12}
             />
-            <YAxis
-              label={{ value: "Success Rate (%)", angle: -90, position: "insideLeft" }}
-              domain={[0, 100]}
-            />
-            <Tooltip
-              formatter={(value: number) => `${value.toFixed(1)}%`}
-              labelFormatter={(label) => `Model: ${label}`}
-            />
+            <YAxis label={{ value: "Seconds", angle: -90, position: "insideLeft" }} />
+            <Tooltip />
             <Legend />
-            <Bar dataKey="successRate" fill="#82ca9d" name="Success Rate (%)" />
+            <Bar dataKey="avgGenerationTime" fill="#ff8042" name="Avg Gen Time (s)" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -143,7 +118,7 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
         </div>
       )}
 
-      {/* Average Cost */}
+      {/* Average Cost - Cheapest */}
       {data.some((d) => d.avgCost > 0) && (
         <div className="border rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4">
@@ -176,17 +151,17 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
         </div>
       )}
 
-      {/* Video Duration */}
-      {data.some((d) => d.avgDuration > 0) && (
+      {/* Average Cost - Most Expensive */}
+      {data.some((d) => d.avgCost > 0) && (
         <div className="border rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4">
-            Average Video Duration by Model (Top 10 Longest)
+            Average Cost per Model (Top 10 Most Expensive)
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
               data={[...data]
-                .filter((d) => d.avgDuration > 0)
-                .sort((a, b) => b.avgDuration - a.avgDuration)
+                .filter((d) => d.avgCost > 0)
+                .sort((a, b) => b.avgCost - a.avgCost)
                 .slice(0, 10)}
             >
               <CartesianGrid strokeDasharray="3 3" />
@@ -198,16 +173,17 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
                 fontSize={12}
               />
               <YAxis
-                label={{ value: "Seconds", angle: -90, position: "insideLeft" }}
-                tickFormatter={(value) => `${value.toFixed(1)}s`}
+                label={{ value: "Cost ($)", angle: -90, position: "insideLeft" }}
+                tickFormatter={(value) => `$${value.toFixed(2)}`}
               />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}s`} />
+              <Tooltip formatter={(value: number) => `$${value.toFixed(3)}`} />
               <Legend />
-              <Bar dataKey="avgDuration" fill="#ff8042" name="Avg Duration (s)" />
+              <Bar dataKey="avgCost" fill="#ff6b6b" name="Avg Cost ($)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
+
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { VideoRetryButton } from "@/components/video-retry-button";
 import { VideoDeleteButton } from "@/components/video-delete-button";
 import { VideoCostEditor } from "@/components/video-cost-editor";
 import { ComparisonEditForm } from "@/components/comparison-edit-form";
+import { AddModelsForm } from "@/components/add-models-form";
 import Link from "next/link";
 
 interface ComparisonPageProps {
@@ -14,7 +15,7 @@ interface ComparisonPageProps {
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { id } = await params;
 
-  const [comparison, allTags] = await Promise.all([
+  const [comparison, allTags, allModels] = await Promise.all([
     prisma.comparison.findUnique({
       where: { id },
       include: {
@@ -37,6 +38,15 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
     prisma.tag.findMany({
       orderBy: { name: "asc" },
     }),
+    prisma.model.findMany({
+      where: { isActive: true },
+      include: {
+        provider: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
   ]);
 
   if (!comparison) {
@@ -56,6 +66,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const avgCost = videosWithCost.length > 0 ? totalCost / videosWithCost.length : 0;
   const videosWithTime = comparison.videos.filter((v) => v.generationTime !== null);
   const avgGenTime = videosWithTime.length > 0 ? videosWithTime.reduce((sum, v) => sum + (v.generationTime ?? 0), 0) / videosWithTime.length : 0;
+  const existingModelIds = comparison.videos.map((v) => v.modelId);
 
   return (
     <div className="space-y-8">
@@ -140,19 +151,38 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
         </div>
       </div>
 
+      {/* Add Models */}
+      <AddModelsForm
+        comparisonId={comparison.id}
+        comparisonType={comparison.type as "image-to-video" | "text-to-video"}
+        allModels={allModels.map((m) => ({
+          id: m.id,
+          slug: m.slug,
+          name: m.name,
+          endpoint: m.endpoint,
+          endpointT2V: m.endpointT2V,
+          provider: {
+            id: m.provider.id,
+            name: m.provider.name,
+            displayName: m.provider.displayName,
+          },
+        }))}
+        existingModelIds={existingModelIds}
+      />
+
       {/* Videos */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Videos</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {comparison.videos.map((video) => (
             <div key={video.id} className="border rounded-lg overflow-hidden">
-              <div className="aspect-video bg-muted relative">
+              <div className="aspect-video bg-black relative">
                 {video.status === "COMPLETED" && video.url ? (
                   <video
                     src={video.url}
                     poster={video.thumbnailUrl || undefined}
                     controls
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 ) : video.status === "PROCESSING" || video.status === "QUEUED" ? (
                   <div className="flex items-center justify-center h-full">
