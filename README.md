@@ -1,35 +1,37 @@
-# ModelArena - AI Video Generation Comparison Platform
+# ModelArena
 
-**ModelArena** is a comprehensive platform for benchmarking and comparing AI video generation models side-by-side. Test multiple models (Kling, Runway, Veo, Sora, Hailuo, Luma, Pika, and more) using identical prompts and source images to objectively compare quality, speed, and cost.
+**AI Video Generation Model Comparison Platform**
+
+Compare 28+ AI video generation models side-by-side. Test Kling, Runway, Veo, Sora, Hailuo, Luma, Pika, and more using identical prompts to objectively compare quality, speed, and cost.
 
 ## Features
 
-- 🎬 **Multi-Model Comparison**: Run the same prompt across 20+ AI video models simultaneously
-- 🖼️ **Image-to-Video & Text-to-Video**: Support for both generation types
-- ⚡ **Queue-Based Processing**: Reliable job processing with BullMQ and Redis
-- 💰 **Automated Cost Tracking**: Intelligent cost calculation with 4 pricing models (per-second, base+per-second, flat-rate, resolution-dependent)
-- 📊 **Analytics Dashboard**: Track performance metrics, generation times, and costs
-- 🗳️ **Anonymous Voting**: Community-driven quality assessment with fingerprint-based voting
-- 🎯 **Model Leaderboards**: See which models perform best across different metrics
-- 🔍 **Advanced Search**: Filter comparisons by type, tags, and search terms
-- 📱 **Mobile Optimized**: Responsive design with optimized video playback
-- 🔐 **Admin Panel**: Secure admin interface for managing comparisons and models
-- 🚀 **Self-Hosted**: Deploy on your own infrastructure with Docker
+- **Multi-Model Comparison** - Run the same prompt across 28+ AI video models simultaneously
+- **Image-to-Video & Text-to-Video** - Support for both generation types
+- **Queue-Based Processing** - Reliable job processing with BullMQ and Redis
+- **Automated Cost Tracking** - 4 pricing models (per-second, base+per-second, flat-rate, resolution-dependent)
+- **Analytics Dashboard** - Track performance metrics, generation times, and costs
+- **Anonymous Voting** - Community-driven quality assessment
+- **Model Leaderboards** - See which models perform best
+- **Advanced Search** - Filter by type, tags, and search terms
+- **Mobile Optimized** - Responsive design with optimized video playback
+- **Admin Panel** - Secure interface for managing comparisons and models
+- **Self-Hosted** - Deploy on your own infrastructure with Docker
 
 ## Tech Stack
 
-| Layer          | Technology                       |
-| -------------- | -------------------------------- |
-| **Framework**  | Next.js 15 (App Router)          |
-| **Language**   | TypeScript                       |
-| **Database**   | PostgreSQL + Prisma ORM          |
-| **Storage**    | Cloudflare R2 (S3-compatible)    |
-| **Queue**      | Redis + BullMQ                   |
-| **Auth**       | NextAuth.js v5 (GitHub/Google)   |
-| **Styling**    | Tailwind CSS + shadcn/ui         |
-| **Thumbnails** | FFmpeg (server-side)             |
-| **Charts**     | Recharts                         |
-| **Deployment** | Docker / Coolify / Self-hosted   |
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Database | PostgreSQL 16 + Prisma ORM |
+| Storage | Cloudflare R2 (S3-compatible) |
+| Queue | Redis 7 + BullMQ |
+| Auth | NextAuth.js v5 (GitHub/Google) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Thumbnails | FFmpeg |
+| Charts | Recharts |
+| Deployment | Docker / Coolify |
 
 ## Quick Start
 
@@ -38,29 +40,36 @@
 - Node.js 20+ and pnpm
 - PostgreSQL 16+
 - Redis 7+
-- FFmpeg (for thumbnail generation)
-- Cloudflare R2 account (or S3-compatible storage)
+- FFmpeg
+- Cloudflare R2 account
 - fal.ai API key
-- (Optional) Runway API key
 
 ### Installation
 
-1. **Clone the repository**
-
 ```bash
+# Clone repository
 git clone https://github.com/yourusername/modelarena-v2.git
 cd modelarena-v2
-```
 
-2. **Install dependencies**
-
-```bash
+# Install dependencies
 pnpm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your values
+
+# Setup database
+pnpm db:push
+pnpm db:seed
+
+# Start development
+pnpm dev      # Terminal 1: Next.js
+pnpm worker   # Terminal 2: BullMQ worker
 ```
 
-3. **Set up environment variables**
+Access at http://localhost:3000
 
-Create a `.env` file in the root directory:
+### Environment Variables
 
 ```env
 # Database
@@ -78,51 +87,21 @@ R2_PUBLIC_URL="https://your-r2-bucket.com"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-generate-with-openssl-rand-base64-32"
+NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
 
-# OAuth Providers (at least one required for admin access)
+# OAuth (at least one required)
 GITHUB_ID="your-github-oauth-app-id"
 GITHUB_SECRET="your-github-oauth-app-secret"
-# OR
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 # AI Providers
 FAL_KEY="your-fal-api-key"
-RUNWAY_API_KEY="your-runway-api-key" # Optional
+RUNWAY_API_KEY="your-runway-api-key"  # Optional
 
-# Admin Access (comma-separated emails)
-ADMIN_EMAILS="your-email@example.com,admin@example.com"
+# Admin Access
+ADMIN_EMAILS="your-email@example.com"
 ```
-
-4. **Set up the database**
-
-```bash
-# Push schema to database
-pnpm db:push
-
-# Seed initial data (providers, models, capabilities)
-pnpm db:seed
-```
-
-5. **Start the development server**
-
-```bash
-# Terminal 1: Start Next.js dev server
-pnpm dev
-
-# Terminal 2: Start BullMQ worker
-pnpm worker
-```
-
-6. **Access the application**
-
-- Public site: http://localhost:3000
-- Admin panel: http://localhost:3000/admin (requires OAuth sign-in)
 
 ## Docker Deployment
-
-### Using Docker Compose
 
 ```bash
 # Start all services
@@ -135,180 +114,106 @@ docker compose logs -f app
 docker compose down
 ```
 
-### Environment Variables for Production
-
-Update your `.env` file with production values:
-
-- Set `NEXTAUTH_URL` to your production domain
-- Use production database and Redis instances
-- Configure R2 with custom domain for better performance
-- Set secure `NEXTAUTH_SECRET`
-
 ## Usage
 
 ### Creating a Comparison
 
-1. Sign in to the admin panel (`/admin`)
+1. Sign in to admin panel (`/admin`)
 2. Navigate to "Generate New Comparison"
-3. Choose comparison type:
-   - **Image-to-Video**: Upload a source image + add motion prompt
-   - **Text-to-Video**: Describe the video you want to generate
-4. Select models to compare (select all or pick specific ones)
-5. Add tags for organization
+3. Choose type: Image-to-Video or Text-to-Video
+4. Select models to compare
+5. Add prompt and optional source image
 6. Click "Generate Comparison"
 
-The system will:
+The system will queue jobs, process them in parallel, upload videos to R2, and generate thumbnails automatically.
 
-- Create a comparison record
-- Queue jobs for each selected model
-- Process jobs in parallel (5 concurrent by default)
-- Download generated videos and upload to R2
-- Generate thumbnails automatically
-- Update status in real-time
+### Managing Content
 
-### Managing Comparisons
-
-- **Edit**: Update title, description, tags, visibility (`/admin/comparisons/[id]`)
-- **Retry Failed Videos**: Click retry button on failed generations
-- **Bulk Operations**: Select multiple comparisons and publish/feature/delete
-- **Search & Filter**: Use search box and filters on comparisons list
-
-### Manual Video Upload
-
-For models without API access (e.g., Luma Ray 3, Pika 2.5):
-
-1. Navigate to `/admin/upload`
-2. Select an existing comparison or create new
-3. Choose the model
-4. Upload the video file
-5. (Optional) Add metadata like generation time
+- **Edit comparisons**: `/admin/comparisons/[id]`
+- **Retry failed videos**: Click retry button on failed cards
+- **Bulk operations**: Select multiple and publish/feature/delete
+- **Manual upload**: `/admin/upload` for models without API
 
 ### Monitoring
 
-- **Job Queue**: Monitor at `/admin/jobs` with real-time updates
-- **Health Check**: `GET /api/health` returns system status
-- **Analytics**: Public analytics at `/analytics`
+- **Job queue**: `/admin/jobs` with real-time updates
+- **Health check**: `GET /api/health`
+- **Analytics**: `/analytics`
 
-### Cost Tracking
+## Supported Models (28)
 
-ModelArena includes comprehensive automated cost tracking:
-
-**Pricing Models Supported**:
-1. **Per-Second**: Cost = duration × rate (with optional audio variants)
-2. **Base + Per-Second**: Cost = basePrice + (extraSeconds × rate)
-3. **Flat-Rate**: Fixed cost per generation
-4. **Resolution-Dependent**: Different pricing tiers based on video resolution
-
-**How It Works**:
-- Worker automatically calculates costs after video generation
-- Uses actual video metadata (duration, width, height)
-- Pricing configured in admin panel (`/admin/models`)
-- Manual cost override available for individual videos
-- Costs displayed on public comparison and model pages
-
-**Cost Display Format**:
-- Intelligent formatting: $0.5512, $0.881, $0.35, $0.70
-- Always shows at least 2 decimals
-- Shows 3rd/4th decimals only if non-zero
-
-**Managing Pricing**:
-1. Navigate to `/admin/models`
-2. Edit model and expand "Pricing Configuration"
-3. Select pricing model type
-4. Configure pricing parameters
-5. Mark as "estimated" if pricing is approximate
-
-**Manual Cost Entry**:
-- Click on cost value in admin comparison view to edit
-- Useful for outdated pricing or manual uploads
-- Available at `/admin/comparisons/[id]`
+| Brand | Models |
+|-------|--------|
+| KlingAI | Kling 2.6 Pro, 2.5 Turbo Pro, O1 |
+| Google Veo | Veo 3.1, Veo 3.1 Fast, Veo 3 |
+| OpenAI Sora | Sora 2, Sora 2 Pro |
+| MiniMax Hailuo | 02 Pro/Standard, 2.3 Pro/Standard/Fast Pro |
+| Runway | Gen-4 Turbo |
+| Alibaba Wan | Wan 2.5 |
+| ByteDance Seedance | 1.0 Pro, 1.0 Pro Fast |
+| Vidu | Q2 Turbo, Q2 Pro, Q2 |
+| PixVerse | V5.5 |
+| Pika Art | Pika 2.2, Pika 2.5 (manual) |
+| Luma Labs | Ray 3 (manual) |
 
 ## API Reference
 
 ### Public Endpoints
 
-| Endpoint                       | Method | Description              |
-| ------------------------------ | ------ | ------------------------ |
-| `/api/comparisons`             | GET    | List public comparisons  |
-| `/api/comparisons/[id]`        | GET    | Get comparison by ID     |
-| `/api/comparisons/slug/[slug]` | GET    | Get comparison by slug   |
-| `/api/models`                  | GET    | List active models       |
-| `/api/models/[slug]`           | GET    | Get model details        |
-| `/api/tags`                    | GET    | List all tags            |
-| `/api/videos/[id]/vote`        | POST   | Vote for video           |
-| `/api/videos/[id]/vote`        | DELETE | Remove vote              |
-| `/api/health`                  | GET    | Health check (DB, Redis) |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/comparisons` | GET | List public comparisons |
+| `/api/comparisons/slug/[slug]` | GET | Get comparison by slug |
+| `/api/models` | GET | List active models |
+| `/api/models/[slug]` | GET | Model details |
+| `/api/videos/[id]/vote` | POST/DELETE | Vote for video |
+| `/api/health` | GET | Health check |
 
-### Admin Endpoints (Authentication Required)
+### Admin Endpoints
 
-| Endpoint                 | Method | Description                  |
-| ------------------------ | ------ | ---------------------------- |
-| `/api/comparisons`       | POST   | Create comparison            |
-| `/api/comparisons/[id]`  | PATCH  | Update comparison            |
-| `/api/comparisons/[id]`  | DELETE | Delete comparison            |
-| `/api/videos/[id]`       | PATCH  | Update video (cost override) |
-| `/api/videos/[id]/retry` | POST   | Retry failed generation      |
-| `/api/upload/image`      | POST   | Upload source image          |
-| `/api/upload/video`      | POST   | Manual video upload          |
-| `/api/admin/models`      | GET    | List all models (+ inactive) |
-| `/api/admin/models`      | POST   | Create model                 |
-| `/api/admin/models/[id]` | PATCH  | Update model                 |
-| `/api/admin/models/[id]` | DELETE | Delete model                 |
-| `/api/jobs`              | GET    | List jobs                    |
-| `/api/jobs/stream`       | GET    | SSE stream for jobs          |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/comparisons` | POST | Create comparison |
+| `/api/comparisons/[id]` | PATCH/DELETE | Update/delete comparison |
+| `/api/videos/[id]/retry` | POST | Retry failed generation |
+| `/api/upload/video` | POST | Manual video upload |
+| `/api/admin/models` | GET/POST | List/create models |
 
 ## Project Structure
 
 ```
 modelarena-v2/
 ├── app/                    # Next.js App Router
-│   ├── (public)/          # Public pages (no auth)
-│   │   ├── page.tsx       # Homepage
-│   │   ├── comparisons/   # Browse & view comparisons
-│   │   ├── models/        # Browse & view models
-│   │   ├── analytics/     # Public analytics
-│   │   └── tags/          # Tag pages
-│   ├── admin/             # Admin pages (auth required)
-│   │   ├── generate/      # Create comparison
-│   │   ├── comparisons/   # Manage comparisons
-│   │   ├── upload/        # Manual upload
-│   │   ├── models/        # Model management
-│   │   └── jobs/          # Queue monitoring
+│   ├── page.tsx           # Homepage
+│   ├── comparisons/       # Browse & view comparisons
+│   ├── models/            # Browse & view models
+│   ├── analytics/         # Performance charts
+│   ├── admin/             # Admin pages
 │   └── api/               # API routes
 ├── components/            # React components
-│   ├── ui/               # shadcn/ui components
-│   ├── video-grid.tsx
-│   ├── vote-button.tsx
-│   └── ...
-├── lib/                   # Core utilities
-│   ├── prisma.ts         # Database client
-│   ├── auth.ts           # NextAuth config
+├── src/lib/              # Core utilities
+│   ├── pricing/          # Cost calculation
 │   ├── providers/        # AI provider abstractions
-│   ├── storage/          # R2 client
 │   ├── queue/            # BullMQ setup
-│   └── thumbnails/       # FFmpeg utilities
-├── prisma/
-│   ├── schema.prisma     # Database schema
-│   └── seed.ts           # Seed data
-├── worker/               # Standalone worker process
-└── public/               # Static assets
+│   └── storage/          # R2 client
+├── prisma/               # Database schema & seed
+├── worker/               # BullMQ worker process
+├── Dockerfile            # Production image
+├── Dockerfile.worker     # Worker image
+└── docker-compose.yml    # Development setup
 ```
 
-## Development
-
-### Available Scripts
+## Commands
 
 ```bash
 # Development
-pnpm dev              # Start dev server (port 3000)
+pnpm dev              # Start dev server
 pnpm build            # Production build
-pnpm start            # Start production server
 pnpm lint             # Run ESLint
 pnpm typecheck        # TypeScript check
 
 # Database
-pnpm db:push          # Push schema changes (dev)
-pnpm db:migrate       # Run migrations (prod)
+pnpm db:push          # Push schema changes
 pnpm db:seed          # Seed initial data
 pnpm db:studio        # Open Prisma Studio
 
@@ -316,152 +221,50 @@ pnpm db:studio        # Open Prisma Studio
 pnpm worker           # Start BullMQ worker
 ```
 
-### Adding a New Model
+## Cost Tracking
 
-1. Edit `prisma/seed.ts`
-2. Add model configuration:
+ModelArena automatically calculates video generation costs:
 
-```typescript
-{
-  slug: "your-model-slug",
-  name: "Your Model Name",
-  provider: "fal.ai", // or "runway", "manual"
-  endpoint: "fal-ai/your-model-id",
-  capabilities: ["image-to-video"], // or ["text-to-video"]
-}
-```
+1. **Per-Second**: `duration × rate`
+2. **Base + Per-Second**: `base + (extra × rate)`
+3. **Flat-Rate**: Fixed cost per generation
+4. **Resolution-Dependent**: Tiered by resolution
 
-3. Run `pnpm db:seed`
-
-### Adding a New Provider
-
-1. Create `lib/providers/your-provider.ts`
-2. Implement `VideoProvider` interface
-3. Register in `lib/providers/registry.ts`
-4. Add API key to `.env`
-
-## Configuration
-
-### Queue Configuration
-
-Edit `lib/queue/worker.ts`:
-
-```typescript
-const worker = new Worker<GenerationJobData>(
-  "video-generation",
-  processJob,
-  {
-    connection: redis,
-    concurrency: 5, // Adjust based on your API limits
-  }
-);
-```
-
-### Rate Limiting
-
-Configure in `lib/rate-limit.ts`:
-
-```typescript
-rateLimit(request, {
-  interval: 60 * 1000, // Time window (ms)
-  uniqueTokenPerInterval: 30, // Max requests
-});
-```
-
-### File Upload Limits
-
-Edit `next.config.ts`:
-
-```typescript
-experimental: {
-  serverActions: {
-    bodySizeLimit: "10mb", // Adjust as needed
-  },
-}
-```
+Costs are calculated after generation using actual video metadata. Manual override available in admin panel.
 
 ## Troubleshooting
 
-### Videos not generating
+**Videos not generating**
+- Check worker is running: `pnpm worker`
+- Check Redis: `redis-cli ping`
+- View job errors: `/admin/jobs`
 
-1. Check worker is running: `pnpm worker`
-2. Check Redis connection: `redis-cli ping`
-3. View job errors at `/admin/jobs`
-4. Check API keys in `.env`
+**Database errors**
+- Verify `DATABASE_URL`
+- Run `pnpm db:push`
 
-### Database errors
-
-1. Verify `DATABASE_URL` in `.env`
-2. Run migrations: `pnpm db:push`
-3. Check PostgreSQL is running
-
-### R2 upload errors
-
-1. Verify R2 credentials in `.env`
-2. Check bucket exists and is accessible
-3. Ensure R2_PUBLIC_URL is correct
-
-### Auth issues
-
-1. Verify OAuth app credentials
-2. Check `ADMIN_EMAILS` includes your email
-3. Clear browser cookies and re-authenticate
-
-## Performance Optimization
-
-- **Database**: All critical queries have indexes
-- **Images**: Using Next.js Image component with optimization
-- **Videos**: Lazy loading with `preload="metadata"`
-- **API**: Rate limiting on public endpoints
-- **Caching**: Browser caching for static assets
-- **CDN**: Use R2 custom domain with CDN for best performance
-
-## Security
-
-- **Authentication**: OAuth with email whitelist
-- **Rate Limiting**: IP-based rate limiting on API routes
-- **Input Validation**: All inputs validated and sanitized
-- **SQL Injection**: Protected by Prisma ORM
-- **XSS**: React automatic escaping
-- **CSRF**: NextAuth built-in protection
+**Auth issues**
+- Verify OAuth credentials
+- Check `ADMIN_EMAILS` includes your email
 
 ## Documentation
 
-- **[PLAN.md](./PLAN.md)** - Complete technical specification and project roadmap
-- **[CLAUDE.md](./CLAUDE.md)** - Project guide and conventions for AI assistance
+- **[PLAN.md](./PLAN.md)** - Complete technical specification
+- **[CLAUDE.md](./CLAUDE.md)** - Project conventions
 
-## Project Status
+## Security
 
-- ✅ Phase 1: Foundation (COMPLETED)
-- ✅ Phase 2: Core Generation (COMPLETED)
-- ✅ Phase 3: Public Interface (COMPLETED)
-- ✅ Phase 4: Admin Features (COMPLETED)
-- ✅ Phase 5: Enhanced Features (COMPLETED)
-- ✅ Phase 6: Polish (COMPLETED)
-
-See [PLAN.md](./PLAN.md) for detailed implementation notes.
-
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- OAuth with email whitelist
+- Rate limiting on public endpoints
+- Input validation with Zod
+- SQL injection protected by Prisma
+- XSS protected by React
+- CSRF protection via NextAuth
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- Built with [Next.js](https://nextjs.org/)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- AI models via [fal.ai](https://fal.ai/) and [Runway](https://runwayml.com/)
-- Storage by [Cloudflare R2](https://www.cloudflare.com/products/r2/)
+MIT License
 
 ---
 
-Built with ❤️ for the AI video generation community
+Built for the AI video generation community
