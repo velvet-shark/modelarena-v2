@@ -5,6 +5,9 @@ import { HomeMasonryGallery } from "@/components/home-masonry-gallery";
 import { ComparisonCard } from "@/components/comparison-card";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   // Get public comparisons with their videos
   const comparisons = await prisma.comparison.findMany({

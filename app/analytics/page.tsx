@@ -4,6 +4,9 @@ import { Footer } from "@/components/footer";
 import { PerformanceCharts } from "@/components/performance-charts";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage() {
   // Fetch model performance data
   const models = await prisma.model.findMany({

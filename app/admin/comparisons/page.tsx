@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { ComparisonsListBulk } from "@/components/comparisons-list-bulk";
 import Link from "next/link";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export default async function ComparisonsPage() {
   const comparisons = await prisma.comparison.findMany({
     include: {

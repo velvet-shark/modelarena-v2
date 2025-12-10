@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { generationQueue } from "@/src/lib/queue";
+import { getGenerationQueue } from "@/src/lib/queue";
 
 // POST /api/videos/[id]/retry - Retry failed video generation
 export async function POST(
@@ -69,7 +69,7 @@ export async function POST(
     });
 
     // Add job to queue
-    await generationQueue.add("generate", {
+    await getGenerationQueue().add("generate", {
       videoId: video.id,
       comparisonId: video.comparisonId,
       modelId: video.modelId,

@@ -7,6 +7,9 @@ import { ModelVideoGrid } from "@/components/model-video-grid";
 import prisma from "@/lib/prisma";
 import { formatCost } from "@/src/lib/format-cost";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 interface ModelPageProps {
   params: Promise<{ slug: string }>;
 }

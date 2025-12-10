@@ -2,6 +2,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export default async function TagsPage() {
   const tags = await prisma.tag.findMany({
     include: {

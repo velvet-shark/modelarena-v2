@@ -8,6 +8,9 @@ import { ComparisonEditForm } from "@/components/comparison-edit-form";
 import { AddModelsForm } from "@/components/add-models-form";
 import Link from "next/link";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 interface ComparisonPageProps {
   params: Promise<{ id: string }>;
 }

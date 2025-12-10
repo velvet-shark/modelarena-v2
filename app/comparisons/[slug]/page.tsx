@@ -7,6 +7,9 @@ import { ComparisonSidebar } from "@/components/comparison-sidebar";
 import { ComparisonVideoGrid } from "@/components/comparison-video-grid";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 interface ComparisonPageProps {
   params: Promise<{ slug: string }>;
 }

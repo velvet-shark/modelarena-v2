@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { getProvider } from "../providers/registry";
 import { downloadAndUploadVideo } from "../storage/r2";
 import { generateThumbnail } from "../thumbnails/generate";
-import { connection, type GenerationJobData } from "./index";
+import { getConnection, type GenerationJobData } from "./index";
 import { CostCalculator, type PricingConfig } from "../pricing";
 
 export function createWorker(concurrency = 5) {
@@ -223,7 +223,7 @@ export function createWorker(concurrency = 5) {
       }
     },
     {
-      connection,
+      connection: getConnection(),
       concurrency,
     }
   );

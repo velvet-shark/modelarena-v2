@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { connection as redis } from "@/src/lib/queue";
+import { getConnection } from "@/src/lib/queue";
 
 export async function GET() {
   const checks: Record<string, { status: "ok" | "error"; message?: string }> = {
@@ -24,6 +24,7 @@ export async function GET() {
 
   // Check Redis
   try {
+    const redis = getConnection();
     await redis.ping();
   } catch (error) {
     checks.redis = {

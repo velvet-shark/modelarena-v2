@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { generationQueue } from "@/src/lib/queue";
+import { getGenerationQueue } from "@/src/lib/queue";
 import { z } from "zod";
 
 const addModelsSchema = z.object({
@@ -104,7 +104,7 @@ export async function POST(
           continue;
         }
 
-        await generationQueue.add("generate", {
+        await getGenerationQueue().add("generate", {
           videoId: video.id,
           comparisonId: comparison.id,
           modelId: model.id,

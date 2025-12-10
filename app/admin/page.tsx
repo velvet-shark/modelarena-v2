@@ -2,6 +2,9 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboard() {
   const [
     totalComparisons,

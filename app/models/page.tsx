@@ -4,6 +4,9 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Models",
   description:

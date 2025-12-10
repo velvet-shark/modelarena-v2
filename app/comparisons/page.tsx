@@ -6,6 +6,9 @@ import { ComparisonSearch } from "@/components/comparison-search";
 import { ComparisonCard } from "@/components/comparison-card";
 import prisma from "@/lib/prisma";
 
+// Force dynamic rendering - requires database connection
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Comparisons",
   description:
