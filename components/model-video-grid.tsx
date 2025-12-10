@@ -131,6 +131,16 @@ function VideoCard({
               Click to expand
             </span>
           </div>
+
+          {/* Vote Button Overlay */}
+          <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <VoteButton
+              videoId={video.id}
+              initialVoteCount={video.voteCount}
+              showZero={false}
+              variant="overlay"
+            />
+          </div>
         </div>
 
         {/* Video Info */}
@@ -155,13 +165,6 @@ function VideoCard({
               </span>
             )}
           </div>
-
-          <VoteButton
-            videoId={video.id}
-            initialVoteCount={video.voteCount}
-            showZero={false}
-            className="w-full"
-          />
         </div>
       </div>
     </div>
@@ -222,7 +225,7 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
         <DialogPortal>
           <DialogOverlay className="bg-black/95" />
           <DialogPrimitive.Content
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-8"
             onClick={() => setSelectedVideo(null)}
           >
             {selectedVideo && (
@@ -232,16 +235,16 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
               >
                 <button
                   onClick={() => setSelectedVideo(null)}
-                  className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
-                  <X className="h-6 w-6 text-white" />
+                  <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </button>
 
                 <div
                   className={`relative ${
                     isVerticalVideo(selectedVideo)
-                      ? "h-[85vh] max-w-[50vw]"
-                      : "w-full max-w-[90vw] max-h-[80vh]"
+                      ? "h-[70vh] sm:h-[80vh] md:h-[85vh] max-w-[90vw] sm:max-w-[70vw] md:max-w-[50vw]"
+                      : "w-full max-w-[95vw] sm:max-w-[90vw] max-h-[70vh] sm:max-h-[80vh]"
                   }`}
                 >
                   <video
@@ -254,18 +257,18 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
                       isVerticalVideo(selectedVideo)
                         ? "h-full w-auto"
                         : "w-full h-auto"
-                    } max-h-[80vh] rounded-xl`}
+                    } max-h-[70vh] sm:max-h-[80vh] rounded-xl`}
                   />
                 </div>
 
-                <div className="mt-6 text-center text-white">
+                <div className="mt-4 sm:mt-6 text-center text-white px-4">
                   <Link
                     href={`/comparisons/${selectedVideo.comparison.slug}`}
-                    className="font-display text-2xl font-bold hover:underline"
+                    className="font-display text-lg sm:text-2xl font-bold hover:underline"
                   >
                     {selectedVideo.comparison.title}
                   </Link>
-                  <div className="flex justify-center gap-6 mt-3 text-sm text-white/60">
+                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-2 sm:mt-3 text-xs sm:text-sm text-white/60">
                     {selectedVideo.generationTime !== null && (
                       <span>{selectedVideo.generationTime.toFixed(1)}s</span>
                     )}
@@ -370,6 +373,16 @@ function VideoCardGrid({
             Click to expand
           </span>
         </div>
+
+        {/* Vote Button Overlay */}
+        <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
+          <VoteButton
+            videoId={video.id}
+            initialVoteCount={video.voteCount}
+            showZero={false}
+            variant="overlay"
+          />
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -393,13 +406,6 @@ function VideoCardGrid({
             </span>
           )}
         </div>
-
-        <VoteButton
-          videoId={video.id}
-          initialVoteCount={video.voteCount}
-          showZero={false}
-          className="w-full"
-        />
       </div>
     </div>
   );

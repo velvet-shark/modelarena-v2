@@ -9,7 +9,7 @@ import {
   TrendingUp,
   Zap,
   Clock,
-  ThumbsUp,
+  Heart,
   X,
   CalendarClock,
   Share2,
@@ -183,6 +183,16 @@ function VideoCard({
               Click to expand
             </span>
           </div>
+
+          {/* Vote Button Overlay */}
+          <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <VoteButton
+              videoId={video.id}
+              initialVoteCount={video.voteCount}
+              showZero={false}
+              variant="overlay"
+            />
+          </div>
         </div>
 
         {/* Video Info */}
@@ -220,14 +230,6 @@ function VideoCard({
               </span>
             )}
           </div>
-
-          {/* Vote Button */}
-          <VoteButton
-            videoId={video.id}
-            initialVoteCount={video.voteCount}
-            showZero={false}
-            className="w-full"
-          />
         </div>
       </div>
     </div>
@@ -356,7 +358,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
     {
       value: "votes",
       label: "Most Voted",
-      icon: <ThumbsUp className="h-3.5 w-3.5" />,
+      icon: <Heart className="h-3.5 w-3.5" />,
     },
     {
       value: "latest",
@@ -437,20 +439,21 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
 
       {/* Sort Options */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">Sort:</span>
+        <span className="text-sm text-muted-foreground hidden sm:inline">Sort:</span>
         <div className="flex flex-wrap gap-1">
           {sortOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => setSortBy(option.value)}
-              className={`px-3 py-1.5 rounded-full text-sm transition-colors flex items-center gap-1.5 ${
+              className={`px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-1.5 ${
                 sortBy === option.value
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted hover:bg-muted/80"
               }`}
             >
               {option.icon}
-              {option.label}
+              <span className="hidden xs:inline sm:inline">{option.label}</span>
+              <span className="xs:hidden sm:hidden">{option.label.split(' ')[0]}</span>
             </button>
           ))}
         </div>
@@ -512,7 +515,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
         <DialogPortal>
           <DialogOverlay className="bg-black/95" />
           <DialogPrimitive.Content
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-8"
             onClick={closeModal}
           >
             {selectedVideo && (
@@ -521,30 +524,30 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Top buttons */}
-                <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex gap-2">
                   {/* Share button */}
                   <button
                     onClick={copyVideoLink}
-                    className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2"
+                    className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2"
                     title="Copy link to video"
                   >
                     {copied ? (
                       <>
-                        <Check className="h-5 w-5 text-green-400" />
-                        <span className="text-sm text-green-400 pr-1">
+                        <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
+                        <span className="text-xs sm:text-sm text-green-400 pr-1 hidden sm:inline">
                           Copied!
                         </span>
                       </>
                     ) : (
-                      <Share2 className="h-5 w-5 text-white" />
+                      <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     )}
                   </button>
                   {/* Close button */}
                   <button
                     onClick={closeModal}
-                    className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                    className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                   >
-                    <X className="h-6 w-6 text-white" />
+                    <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </button>
                 </div>
 
@@ -552,8 +555,8 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                 <div
                   className={`relative ${
                     isVerticalVideo(selectedVideo)
-                      ? "h-[85vh] max-w-[50vw]"
-                      : "w-full max-w-[90vw] max-h-[80vh]"
+                      ? "h-[70vh] sm:h-[80vh] md:h-[85vh] max-w-[90vw] sm:max-w-[70vw] md:max-w-[50vw]"
+                      : "w-full max-w-[95vw] sm:max-w-[90vw] max-h-[70vh] sm:max-h-[80vh]"
                   }`}
                 >
                   <video
@@ -567,19 +570,19 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                       isVerticalVideo(selectedVideo)
                         ? "h-full w-auto"
                         : "w-full h-auto"
-                    } max-h-[80vh] rounded-xl`}
+                    } max-h-[70vh] sm:max-h-[80vh] rounded-xl`}
                   />
                 </div>
 
                 {/* Video info */}
-                <div className="mt-6 text-center text-white">
-                  <h3 className="font-display text-2xl font-bold">
+                <div className="mt-4 sm:mt-6 text-center text-white px-4">
+                  <h3 className="font-display text-lg sm:text-2xl font-bold">
                     {selectedVideo.model.name}
                   </h3>
-                  <p className="text-sm text-white/70 mt-1">
+                  <p className="text-xs sm:text-sm text-white/70 mt-1">
                     via {selectedVideo.model.provider.displayName}
                   </p>
-                  <div className="flex justify-center gap-6 mt-3 text-sm text-white/60">
+                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-2 sm:mt-3 text-xs sm:text-sm text-white/60">
                     {selectedVideo.generationTime !== null && (
                       <span>{selectedVideo.generationTime.toFixed(1)}s</span>
                     )}
@@ -721,6 +724,16 @@ function VideoCardContent({
             Click to expand
           </span>
         </div>
+
+        {/* Vote Button Overlay */}
+        <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
+          <VoteButton
+            videoId={video.id}
+            initialVoteCount={video.voteCount}
+            showZero={false}
+            variant="overlay"
+          />
+        </div>
       </div>
 
       {/* Video Info */}
@@ -758,14 +771,6 @@ function VideoCardContent({
             </span>
           )}
         </div>
-
-        {/* Vote Button */}
-        <VoteButton
-          videoId={video.id}
-          initialVoteCount={video.voteCount}
-          showZero={false}
-          className="w-full"
-        />
       </div>
     </>
   );

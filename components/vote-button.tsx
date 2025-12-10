@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp } from "lucide-react";
+import { Heart } from "lucide-react";
 
 interface VoteButtonProps {
   videoId: string;
   initialVoteCount: number;
   className?: string;
   showZero?: boolean;
+  variant?: "default" | "overlay";
 }
 
 export function VoteButton({
@@ -17,6 +18,7 @@ export function VoteButton({
   initialVoteCount,
   className,
   showZero = true,
+  variant = "default",
 }: VoteButtonProps) {
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [hasVoted, setHasVoted] = useState(false);
@@ -97,6 +99,33 @@ export function VoteButton({
 
   const displayCount = showZero || voteCount > 0;
 
+  if (variant === "overlay") {
+    return (
+      <button
+        onClick={handleVote}
+        disabled={!fingerprint || loading}
+        className={`group/vote flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-sm cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+          hasVoted
+            ? "bg-black/50 hover:bg-black/70"
+            : "bg-black/50 hover:bg-red-500/90 hover:scale-105"
+        } ${className}`}
+      >
+        <Heart
+          className={`h-4 w-4 drop-shadow-md transition-colors ${
+            hasVoted
+              ? "text-white fill-white"
+              : "text-white group-hover/vote:text-white group-hover/vote:fill-white"
+          }`}
+        />
+        {displayCount && (
+          <span className="text-white text-sm font-medium drop-shadow-md">
+            {voteCount}
+          </span>
+        )}
+      </button>
+    );
+  }
+
   return (
     <Button
       onClick={handleVote}
@@ -105,7 +134,7 @@ export function VoteButton({
       size="sm"
       className={className}
     >
-      <ThumbsUp className={`h-4 w-4 ${displayCount ? "mr-1" : ""} ${hasVoted ? "fill-current" : ""}`} />
+      <Heart className={`h-4 w-4 ${displayCount ? "mr-1" : ""} ${hasVoted ? "fill-current" : ""}`} />
       {displayCount && voteCount}
     </Button>
   );

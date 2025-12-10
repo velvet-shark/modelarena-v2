@@ -38,14 +38,26 @@
 
 /* Masonry grid with CSS columns */
 @layer utilities {
+  /* Default: 1 column on very small screens */
   .masonry {
-    column-count: 2;
-    column-gap: 1rem;
+    column-count: 1;
+    column-gap: 0.75rem;
   }
 
   .masonry-item {
     break-inside: avoid;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Small screens and up: 2 columns */
+  @media (min-width: 480px) {
+    .masonry {
+      column-count: 2;
+      column-gap: 1rem;
+    }
+    .masonry-item {
+      margin-bottom: 1rem;
+    }
   }
 
   @media (min-width: 640px) {

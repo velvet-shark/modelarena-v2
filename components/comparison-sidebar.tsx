@@ -131,8 +131,7 @@ function SidebarContent({
     <>
       {/* Source Image */}
       {sourceImage && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Source Image</h3>
+        <div className="b-0">
           <button
             onClick={onImageClick}
             className="rounded-xl overflow-hidden w-full cursor-zoom-in hover:opacity-90 transition-opacity"
@@ -145,26 +144,27 @@ function SidebarContent({
               className="w-full h-auto object-cover"
             />
           </button>
+          <h3 className="text-sm font-medium text-muted-foreground">Source Image</h3>
         </div>
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-muted/50 p-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
           <div className="text-xs text-muted-foreground">Models</div>
-          <div className="font-display text-2xl font-bold mt-1">{modelCount}</div>
+          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{modelCount}</div>
         </div>
-        <div className="rounded-xl bg-muted/50 p-4">
+        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
           <div className="text-xs text-muted-foreground">Avg Time</div>
-          <div className="font-display text-2xl font-bold mt-1">{avgGenTime.toFixed(0)}s</div>
+          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{avgGenTime.toFixed(0)}s</div>
         </div>
-        <div className="rounded-xl bg-muted/50 p-4">
+        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
           <div className="text-xs text-muted-foreground">Total Cost</div>
-          <div className="font-display text-2xl font-bold mt-1">{formatCost(totalCost)}</div>
+          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(totalCost)}</div>
         </div>
-        <div className="rounded-xl bg-muted/50 p-4">
+        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
           <div className="text-xs text-muted-foreground">Avg Cost</div>
-          <div className="font-display text-2xl font-bold mt-1">{formatCost(avgCost)}</div>
+          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(avgCost)}</div>
         </div>
       </div>
 

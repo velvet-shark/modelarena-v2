@@ -154,26 +154,26 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
     <main className="min-h-screen">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 sm:space-y-10">
         {/* Page Header */}
         <div className="max-w-2xl">
-          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Comparisons
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Browse side-by-side comparisons of AI video generation models.
           </p>
         </div>
 
         {/* Filters Row - Type tabs + Search */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           {/* Type Filter */}
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 flex-shrink-0 overflow-x-auto pb-1 sm:pb-0">
             {typeOptions.map((option) => (
               <Link
                 key={option.value}
                 href={buildUrl({ type: option.value || undefined })}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                   params.type === option.value ||
                   (!params.type && option.value === "")
                     ? "bg-primary text-primary-foreground"
@@ -193,11 +193,11 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
 
         {/* Tag Filters */}
         {allTags.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap -mx-1 px-1 overflow-x-auto pb-1">
             {params.tag && (
               <Link
                 href={buildUrl({ tag: undefined })}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-muted hover:bg-muted/80 transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium bg-muted hover:bg-muted/80 transition-colors whitespace-nowrap"
               >
                 Clear tag
               </Link>
@@ -206,7 +206,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
               <Link
                 key={tag.id}
                 href={buildUrl({ tag: tag.slug })}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                   params.tag === tag.slug
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted hover:bg-muted/80"
@@ -219,21 +219,21 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
         )}
 
         {/* Results Header */}
-        <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <p className="text-muted-foreground text-sm sm:text-base">
             <span className="font-display text-foreground font-semibold">
               {sortedComparisons.length}
             </span>{" "}
             comparison{sortedComparisons.length !== 1 ? "s" : ""}
           </p>
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0">
             {sortOptions.map((option) => (
               <Link
                 key={option.value}
                 href={buildUrl({
                   sort: option.value === "votes" ? undefined : option.value,
                 })}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-sm transition-colors whitespace-nowrap ${
                   sortOption === option.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted hover:bg-muted/80"
@@ -256,7 +256,7 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl bg-muted/50 p-16 text-center">
+          <div className="rounded-2xl bg-muted/50 p-8 sm:p-16 text-center">
             <p className="text-muted-foreground">
               No comparisons found with the selected filters.
             </p>

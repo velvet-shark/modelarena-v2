@@ -52,11 +52,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
   }, {} as Record<string, Model[]>);
 
   const toggleModel = (modelId: string) => {
-    setSelectedModels((prev) =>
-      prev.includes(modelId)
-        ? prev.filter((id) => id !== modelId)
-        : [...prev, modelId]
-    );
+    setSelectedModels((prev) => (prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]));
   };
 
   const selectAll = () => {
@@ -95,7 +91,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
 
       const response = await fetch("/api/upload/image", {
         method: "POST",
-        body: formData,
+        body: formData
       });
 
       if (!response.ok) {
@@ -151,16 +147,16 @@ export function GenerateForm({ models }: GenerateFormProps) {
         isPublic,
         isFeatured,
         aspectRatio,
-        duration,
+        duration
       };
 
       // Create comparison
       const response = await fetch("/api/comparisons", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -178,30 +174,17 @@ export function GenerateForm({ models }: GenerateFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {error && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
+      {error && <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md">{error}</div>}
 
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            name="title"
-            required
-            placeholder="Dancing Robot at Sunset"
-          />
+          <Input id="title" name="title" required placeholder="Dancing Robot at Sunset" />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="description">Description (optional)</Label>
-          <Textarea
-            id="description"
-            name="description"
-            placeholder="A detailed description of this comparison..."
-          />
+          <Textarea id="description" name="description" placeholder="A detailed description of this comparison..." />
         </div>
 
         <div className="space-y-2">
@@ -228,24 +211,24 @@ export function GenerateForm({ models }: GenerateFormProps) {
 
           <div className="space-y-2">
             <Label>Aspect Ratio</Label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { value: "16:9", label: "16:9", desc: "Landscape" },
                 { value: "9:16", label: "9:16", desc: "Portrait" },
-                { value: "1:1", label: "1:1", desc: "Square" },
+                { value: "1:1", label: "1:1", desc: "Square" }
               ].map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setAspectRatio(option.value as typeof aspectRatio)}
-                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                  className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg border-2 transition-colors ${
                     aspectRatio === option.value
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="font-semibold">{option.label}</div>
-                  <div className="text-xs text-muted-foreground">{option.desc}</div>
+                  <div className="font-semibold text-sm sm:text-base">{option.label}</div>
+                  <div className="text-xs text-muted-foreground hidden sm:block">{option.desc}</div>
                 </button>
               ))}
             </div>
@@ -253,23 +236,23 @@ export function GenerateForm({ models }: GenerateFormProps) {
 
           <div className="space-y-2">
             <Label>Duration</Label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 5, label: "5 seconds", desc: "Faster, cheaper" },
-                { value: 10, label: "10 seconds", desc: "Longer videos" },
+                { value: 10, label: "10 seconds", desc: "Longer videos" }
               ].map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setDuration(option.value as typeof duration)}
-                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                  className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg border-2 transition-colors ${
                     duration === option.value
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="font-semibold">{option.label}</div>
-                  <div className="text-xs text-muted-foreground">{option.desc}</div>
+                  <div className="font-semibold text-sm sm:text-base">{option.label}</div>
+                  <div className="text-xs text-muted-foreground hidden sm:block">{option.desc}</div>
                 </button>
               ))}
             </div>
@@ -284,11 +267,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
             <Label htmlFor="sourceImage">Source Image *</Label>
             {sourceImagePreview ? (
               <div className="relative border rounded-lg p-4">
-                <img
-                  src={sourceImagePreview}
-                  alt="Source"
-                  className="max-h-64 mx-auto rounded"
-                />
+                <img src={sourceImagePreview} alt="Source" className="max-h-64 mx-auto rounded" />
                 <Button
                   type="button"
                   variant="destructive"
@@ -302,10 +281,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
             ) : (
               <div className="border-2 border-dashed rounded-lg p-8 text-center">
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <Label
-                  htmlFor="sourceImage"
-                  className="cursor-pointer text-sm text-muted-foreground"
-                >
+                <Label htmlFor="sourceImage" className="cursor-pointer text-sm text-muted-foreground">
                   Click to upload or drag and drop
                   <br />
                   <span className="text-xs">PNG, JPG, WebP (max 10MB)</span>
@@ -351,35 +327,23 @@ export function GenerateForm({ models }: GenerateFormProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <Label>Select Models ({selectedModels.length} selected)</Label>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={selectAll}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={selectAll}>
               Select All
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={deselectAll}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={deselectAll}>
               Deselect All
             </Button>
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-6">
+        <div className="border rounded-lg p-3 sm:p-4 space-y-6">
           {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
             <div key={provider} className="space-y-3">
-              <div className="font-semibold text-sm text-muted-foreground">
-                {provider}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="font-semibold text-sm text-muted-foreground">{provider}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {providerModels.map((model) => (
                   <div key={model.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -387,10 +351,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
                       checked={selectedModels.includes(model.id)}
                       onCheckedChange={() => toggleModel(model.id)}
                     />
-                    <Label
-                      htmlFor={model.id}
-                      className="text-sm font-normal cursor-pointer"
-                    >
+                    <Label htmlFor={model.id} className="text-sm font-normal cursor-pointer">
                       {model.name}
                     </Label>
                   </div>
@@ -400,23 +361,14 @@ export function GenerateForm({ models }: GenerateFormProps) {
           ))}
         </div>
 
-        {selectedModels.length === 0 && (
-          <p className="text-sm text-destructive">
-            Please select at least one model
-          </p>
-        )}
+        {selectedModels.length === 0 && <p className="text-sm text-destructive">Please select at least one model</p>}
       </div>
 
-      <div className="flex gap-4">
-        <Button type="submit" disabled={loading || uploadingImage || selectedModels.length === 0}>
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        <Button type="submit" disabled={loading || uploadingImage || selectedModels.length === 0} className="w-full sm:w-auto">
           {uploadingImage ? "Uploading Image..." : loading ? "Creating..." : "Create Comparison"}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={loading}
-        >
+        <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="w-full sm:w-auto">
           Cancel
         </Button>
       </div>

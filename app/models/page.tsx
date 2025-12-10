@@ -53,40 +53,40 @@ export default async function ModelsPage() {
     <main className="min-h-screen">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12">
         {/* Page Header */}
         <div className="max-w-2xl">
-          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Models
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Explore {models.length} AI video generation models across{" "}
             {sortedBrands.length} brands.
           </p>
         </div>
 
         {/* Models by Brand */}
-        <div className="space-y-12">
+        <div className="space-y-8 sm:space-y-12">
           {sortedBrands.map((brandName) => {
             const brandModels = modelsByBrand[brandName];
             return (
-              <section key={brandName} className="space-y-6">
-                <div className="flex items-baseline gap-3">
-                  <h2 className="font-display text-2xl font-bold">
+              <section key={brandName} className="space-y-4 sm:space-y-6">
+                <div className="flex items-baseline gap-2 sm:gap-3">
+                  <h2 className="font-display text-xl sm:text-2xl font-bold">
                     {brandName}
                   </h2>
-                  <span className="text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     {brandModels.length} model
                     {brandModels.length !== 1 ? "s" : ""}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {brandModels.map((model) => (
                     <Link
                       key={model.id}
                       href={`/models/${model.slug}`}
-                      className="group block rounded-xl border bg-card p-5 hover:shadow-lg transition-shadow space-y-4"
+                      className="group block rounded-xl border bg-card p-4 sm:p-5 hover:shadow-lg transition-shadow space-y-3 sm:space-y-4"
                     >
                       <div className="space-y-1">
                         <h3 className="font-semibold group-hover:text-primary transition-colors">
@@ -126,7 +126,7 @@ export default async function ModelsPage() {
 
         {/* Empty State */}
         {models.length === 0 && (
-          <div className="rounded-2xl bg-muted/50 p-16 text-center">
+          <div className="rounded-2xl bg-muted/50 p-8 sm:p-16 text-center">
             <p className="text-muted-foreground">
               No models with generated videos yet.
             </p>

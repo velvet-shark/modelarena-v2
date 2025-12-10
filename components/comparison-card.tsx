@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ThumbsUp } from "lucide-react";
+import { Heart } from "lucide-react";
 
 interface ComparisonCardProps {
   comparison: {
@@ -144,7 +144,7 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
 
             {comparison.totalVotes > 0 && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <ThumbsUp className="w-3.5 h-3.5" />
+                <Heart className="w-3.5 h-3.5" />
                 <span>{comparison.totalVotes}</span>
               </div>
             )}

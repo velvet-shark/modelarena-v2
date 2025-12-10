@@ -106,7 +106,7 @@ export function HomeMasonryGallery({ videos }: HomeMasonryGalleryProps) {
   const sortedVideos = [...videos].slice(0, 24); // Limit to 24 for homepage
 
   return (
-    <div className="px-4">
+    <div className="px-4 sm:px-6">
       <div className="masonry masonry-md-3 masonry-lg-4 masonry-xl-5">
         {sortedVideos.map((video) => (
           <VideoCard key={video.id} video={video} />
