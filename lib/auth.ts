@@ -22,6 +22,8 @@ export const authOptions = {
   pages: {
     signIn: "/auth/signin",
   },
+  // Trust the proxy (Coolify/nginx) for HTTPS detection
+  trustHost: true,
 } satisfies NextAuthConfig;
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
