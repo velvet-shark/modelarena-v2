@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Layers, LayoutGrid, Heart, Zap, DollarSign, Clock, Users } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "How It Works",
+  description:
+    "Learn how ModelArena benchmarks AI video generation models. We test multiple models with identical prompts for unbiased, side-by-side comparisons.",
+  openGraph: {
+    title: "How ModelArena Works | AI Video Model Comparison",
+    description:
+      "Learn how ModelArena benchmarks AI video generation models with identical prompts for unbiased comparisons.",
+  },
+};
 
 export default function HowItWorksPage() {
   return (

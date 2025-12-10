@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ModelVideoGrid } from "@/components/model-video-grid";
@@ -8,6 +9,61 @@ import { formatCost } from "@/src/lib/format-cost";
 
 interface ModelPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: ModelPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  const model = await prisma.model.findUnique({
+    where: { slug },
+    include: {
+      provider: true,
+      capabilities: true,
+      _count: {
+        select: {
+          videos: {
+            where: { status: "COMPLETED" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!model) {
+    return {
+      title: "Model Not Found",
+    };
+  }
+
+  const capabilities = model.capabilities.map((c) => c.name).join(", ");
+  const description = `${model.name} by ${model.provider.displayName} - View ${model._count.videos} AI-generated videos${capabilities ? `. Supports ${capabilities}` : ""}.`;
+  const baseUrl = process.env.NEXTAUTH_URL || "https://modelarena.ai";
+  const ogImageUrl = `${baseUrl}/api/og?type=model&slug=${slug}`;
+
+  return {
+    title: model.name,
+    description,
+    openGraph: {
+      title: `${model.name} | ModelArena`,
+      description,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${model.name} - AI Video Generation Model`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${model.name} | ModelArena`,
+      description,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 export default async function ModelPage({ params }: ModelPageProps) {

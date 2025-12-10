@@ -33,10 +33,8 @@ export async function generateMetadata({
     };
   }
 
-  const imageUrl =
-    comparison.sourceImage?.url ||
-    comparison.videos[0]?.thumbnailUrl ||
-    "/og-image.png";
+  const baseUrl = process.env.NEXTAUTH_URL || "https://modelarena.ai";
+  const ogImageUrl = `${baseUrl}/api/og?type=comparison&slug=${slug}`;
 
   return {
     title: comparison.title,
@@ -51,7 +49,7 @@ export async function generateMetadata({
       description: comparison.description || comparison.prompt,
       images: [
         {
-          url: imageUrl,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: comparison.title,
@@ -62,7 +60,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: comparison.title,
       description: comparison.description || comparison.prompt,
-      images: [imageUrl],
+      images: [ogImageUrl],
     },
   };
 }

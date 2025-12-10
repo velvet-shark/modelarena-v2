@@ -180,7 +180,7 @@ function SidebarContent({
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">Prompt</h3>
         <blockquote className="relative pl-4 border-l-2 border-[#28A2DD]">
-          <span className="absolute left-2 -top-2 text-4xl text-[#28A2DD]/30 font-serif">"</span>
+          <span className="absolute left-2 -top-2 text-4xl text-[#28A2DD]/30 font-serif">&ldquo;</span>
           <p className="text-sm whitespace-pre-wrap leading-relaxed italic text-foreground/90 pt-2">{prompt}</p>
         </blockquote>
       </div>

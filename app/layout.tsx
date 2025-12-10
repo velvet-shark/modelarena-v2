@@ -72,7 +72,13 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
 };
@@ -84,6 +90,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script defer data-domain="modelarena.ai" src="https://pls.velvetshark.com/js/script.hash.outbound-links.js"></script>
+        <script dangerouslySetInnerHTML={{ __html: 'window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }' }} />
+      </head>
       <body className={`${plusJakarta.variable} ${outfit.variable} font-sans`}>
         <AuthProvider>{children}</AuthProvider>
       </body>

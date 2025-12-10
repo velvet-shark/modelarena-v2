@@ -1,9 +1,26 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ComparisonSearch } from "@/components/comparison-search";
 import { ComparisonCard } from "@/components/comparison-card";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "Comparisons",
+  description:
+    "Browse side-by-side comparisons of AI video generation models. See how Kling, Runway, Veo, Sora, and Hailuo perform on identical prompts.",
+  openGraph: {
+    title: "AI Video Model Comparisons | ModelArena",
+    description:
+      "Browse side-by-side comparisons of AI video generation models. See how Kling, Runway, Veo, Sora, and Hailuo perform on identical prompts.",
+    images: ["/og-image.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-image.png"],
+  },
+};
 
 interface SearchParams {
   type?: string;

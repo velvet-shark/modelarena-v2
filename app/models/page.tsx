@@ -1,7 +1,24 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "Models",
+  description:
+    "Explore AI video generation models from Kling, Runway, Veo, Sora, Hailuo, and more. Compare capabilities, performance, and pricing across leading platforms.",
+  openGraph: {
+    title: "AI Video Generation Models | ModelArena",
+    description:
+      "Explore AI video generation models from Kling, Runway, Veo, Sora, Hailuo, and more. Compare capabilities, performance, and pricing.",
+    images: ["/og-image.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-image.png"],
+  },
+};
 
 export default async function ModelsPage() {
   const models = await prisma.model.findMany({
