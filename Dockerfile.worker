@@ -9,7 +9,7 @@ FROM node:22.23.4-alpine AS base
 RUN apk add --no-cache libc6-compat ffmpeg
 
 # Enable corepack for pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
 
