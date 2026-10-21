@@ -3,7 +3,7 @@
 # ============================================
 # Base stage - shared dependencies
 # ============================================
-FROM node:20-alpine AS base
+FROM node:22.23.4-alpine AS base
 
 # Install dependencies needed for node-gyp and FFmpeg
 RUN apk add --no-cache libc6-compat ffmpeg
@@ -49,7 +49,7 @@ RUN pnpm build
 # ============================================
 # Runner stage - production image
 # ============================================
-FROM node:20-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 
 WORKDIR /app
 
