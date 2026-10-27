@@ -27,6 +27,9 @@ type Model = {
   }>;
 };
 
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 interface GenerateFormProps {
   models: Model[];
 }
@@ -42,6 +45,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [sourceImagePreview, setSourceImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   // Only models with an endpoint for the chosen type (the API rejects others)
   const isModelCompatible = (model: Model, t: typeof type = type) =>
@@ -80,20 +84,34 @@ export function GenerateForm({ models }: GenerateFormProps) {
     setSelectedModels([]);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSourceImage(file);
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSourceImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  // Same limits as /api/upload/image, checked here so a wrong file fails
+  // before the user fills in the rest of the form
+  const selectImage = (file: File | undefined) => {
+    if (!file) return;
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setError("Source image must be PNG, JPG or WebP");
+      return;
     }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("Source image is too large (max 10MB)");
+      return;
+    }
+    setError(null);
+    setSourceImage(file);
+    setSourceImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    selectImage(e.dataTransfer.files[0]);
   };
 
   const removeImage = () => {
+    if (sourceImagePreview) URL.revokeObjectURL(sourceImagePreview);
     setSourceImage(null);
     setSourceImagePreview(null);
   };
@@ -291,12 +309,23 @@ export function GenerateForm({ models }: GenerateFormProps) {
                   size="sm"
                   className="absolute top-2 right-2"
                   onClick={removeImage}
+                  aria-label="Remove image"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragging ? "border-primary bg-primary/5" : ""
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+              >
                 <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                 <Label htmlFor="sourceImage" className="cursor-pointer text-sm text-muted-foreground">
                   Click to upload or drag and drop
@@ -306,8 +335,8 @@ export function GenerateForm({ models }: GenerateFormProps) {
                 <Input
                   id="sourceImage"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleImageChange}
+                  accept={IMAGE_TYPES.join(",")}
+                  onChange={(e) => selectImage(e.target.files?.[0])}
                   className="hidden"
                 />
               </div>

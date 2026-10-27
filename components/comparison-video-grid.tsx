@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useHoverPlay } from "@/hooks/use-hover-play";
+import { buttonProps } from "@/lib/utils";
 import Link from "next/link";
 import {
   Play,
@@ -104,7 +105,7 @@ function VideoCard({
           className="relative cursor-pointer bg-black"
           style={{ aspectRatio }}
           {...hoverProps}
-          onClick={onFullscreen}
+          {...buttonProps(onFullscreen, `Open ${video.model.name} video`)}
         >
           {/* Thumbnail */}
           {video.thumbnailUrl && (
@@ -495,12 +496,16 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
           <DialogPrimitive.Content
             className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-8"
             onClick={closeModal}
+            aria-describedby={undefined}
           >
             {selectedVideo && (
               <div
                 className="relative w-full h-full flex flex-col items-center justify-center"
                 onClick={(e) => e.stopPropagation()}
               >
+                <DialogPrimitive.Title className="sr-only">
+                  {selectedVideo.model.name}
+                </DialogPrimitive.Title>
                 {/* Top buttons */}
                 <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex gap-2">
                   {/* Share button */}
@@ -508,6 +513,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                     onClick={copyVideoLink}
                     className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2"
                     title="Copy link to video"
+                    aria-label="Copy link to video"
                   >
                     {copied ? (
                       <>
@@ -523,6 +529,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                   {/* Close button */}
                   <button
                     onClick={closeModal}
+                    aria-label="Close"
                     className="p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                   >
                     <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
@@ -624,7 +631,7 @@ function VideoCardContent({
         className="relative cursor-pointer bg-black"
         style={{ aspectRatio }}
         {...hoverProps}
-        onClick={onFullscreen}
+        {...buttonProps(onFullscreen, `Open ${video.model.name} video`)}
       >
         {/* Thumbnail */}
         {video.thumbnailUrl && (

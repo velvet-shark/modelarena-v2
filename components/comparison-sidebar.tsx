@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { formatCost } from "@/src/lib/format-cost";
 
 interface ComparisonSidebarProps {
@@ -37,6 +39,7 @@ export function ComparisonSidebar({
       <div className="lg:hidden rounded-xl border bg-card overflow-hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
+          aria-expanded={isOpen}
           className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
         >
           <span className="font-semibold">Details</span>
@@ -79,26 +82,33 @@ export function ComparisonSidebar({
       </div>
 
       {/* Image Modal */}
-      {isImageModalOpen && sourceImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setIsImageModalOpen(false)}
-        >
-          <button
-            onClick={() => setIsImageModalOpen(false)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            <X className="h-6 w-6 text-white" />
-          </button>
-          <Image
-            src={sourceImage.url}
-            alt="Source image"
-            width={sourceImage.width || 1920}
-            height={sourceImage.height || 1080}
-            className="max-w-full max-h-[90vh] object-contain rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+      {sourceImage && (
+        <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+          <DialogPortal>
+            <DialogOverlay className="bg-black/90" />
+            <DialogPrimitive.Content
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={() => setIsImageModalOpen(false)}
+              aria-describedby={undefined}
+            >
+              <DialogPrimitive.Title className="sr-only">Source image</DialogPrimitive.Title>
+              <DialogPrimitive.Close
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6 text-white" />
+              </DialogPrimitive.Close>
+              <Image
+                src={sourceImage.url}
+                alt="Source image"
+                width={sourceImage.width || 1920}
+                height={sourceImage.height || 1080}
+                className="max-w-full max-h-[90vh] object-contain rounded-xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </DialogPrimitive.Content>
+          </DialogPortal>
+        </Dialog>
       )}
     </>
   );

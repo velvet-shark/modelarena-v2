@@ -91,7 +91,9 @@ export interface CostCalculationContext {
  * Result of cost calculation
  */
 export interface CostCalculationResult {
-  cost: number;
+  // null when the cost can't be worked out (no pricing, missing resolution);
+  // stored as-is so the UI shows N/A instead of a misleading $0
+  cost: number | null;
   breakdown?: {
     basePrice?: number;
     variablePrice?: number;

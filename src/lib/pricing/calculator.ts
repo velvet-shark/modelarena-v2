@@ -19,12 +19,12 @@ export class CostCalculator {
     fallbackCostPerSecond?: number | null
   ): CostCalculationResult {
     // No pricing config available
-    if (!config && !fallbackCostPerSecond) {
-      return { cost: 0, error: "No pricing configuration available" };
+    if (!config && fallbackCostPerSecond == null) {
+      return { cost: null, error: "No pricing configuration available" };
     }
 
     // Fallback to simple costPerSecond field
-    if (!config && fallbackCostPerSecond) {
+    if (!config && fallbackCostPerSecond != null) {
       return {
         cost: this.roundCost(context.duration * fallbackCostPerSecond),
         breakdown: {
@@ -51,12 +51,12 @@ export class CostCalculator {
           return this.calculateResolutionDependent(validConfig, context);
 
         default:
-          return { cost: 0, error: "Unknown pricing model" };
+          return { cost: null, error: "Unknown pricing model" };
       }
     } catch (error) {
       console.error("[CostCalculator] Calculation error:", error);
       return {
-        cost: 0,
+        cost: null,
         error: error instanceof Error ? error.message : "Calculation failed",
       };
     }
@@ -115,7 +115,7 @@ export class CostCalculator {
   ): CostCalculationResult {
     if (!context.width || !context.height) {
       return {
-        cost: 0,
+        cost: null,
         error: "Resolution required for resolution-dependent pricing",
       };
     }
@@ -128,7 +128,7 @@ export class CostCalculator {
     );
 
     if (!tier) {
-      return { cost: 0, error: "No matching resolution tier found" };
+      return { cost: null, error: "No matching resolution tier found" };
     }
 
     const cost =

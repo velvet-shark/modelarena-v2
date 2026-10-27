@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useHoverPlay } from "@/hooks/use-hover-play";
+import { buttonProps } from "@/lib/utils";
 import Link from "next/link";
 import { Play, X } from "lucide-react";
 import { VoteButton } from "@/components/vote-button";
@@ -70,7 +71,7 @@ function VideoCard({
           className="relative cursor-pointer bg-black"
           style={{ aspectRatio }}
           {...hoverProps}
-          onClick={onFullscreen}
+          {...buttonProps(onFullscreen, `Open ${video.comparison.title} video`)}
         >
           {/* Thumbnail */}
           {video.thumbnailUrl && (
@@ -218,14 +219,19 @@ export function ModelVideoGrid({ videos }: ModelVideoGridProps) {
           <DialogPrimitive.Content
             className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-8"
             onClick={() => setSelectedVideo(null)}
+            aria-describedby={undefined}
           >
             {selectedVideo && (
               <div
                 className="relative w-full h-full flex flex-col items-center justify-center"
                 onClick={(e) => e.stopPropagation()}
               >
+                <DialogPrimitive.Title className="sr-only">
+                  {selectedVideo.comparison.title}
+                </DialogPrimitive.Title>
                 <button
                   onClick={() => setSelectedVideo(null)}
+                  aria-label="Close"
                   className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
                   <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
@@ -306,7 +312,7 @@ function VideoCardGrid({
         className="relative cursor-pointer bg-black"
         style={{ aspectRatio }}
         {...hoverProps}
-        onClick={onFullscreen}
+        {...buttonProps(onFullscreen, `Open ${video.comparison.title} video`)}
       >
         {video.thumbnailUrl && (
           <img
