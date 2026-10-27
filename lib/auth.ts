@@ -9,6 +9,8 @@ export const authOptions = {
     GitHubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
+      // GitHub sends `iss` in the OAuth callback; @auth/core < 0.41.3 expects authjs.dev and rejects it
+      issuer: "https://github.com/login/oauth",
     }),
   ],
   callbacks: {
