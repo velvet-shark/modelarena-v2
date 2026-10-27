@@ -4,7 +4,7 @@ import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter"
+  variable: "--font-sans"
 });
 
 const outfit = Outfit({

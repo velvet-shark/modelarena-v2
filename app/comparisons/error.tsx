@@ -1,46 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import Link from 'next/link';
+import { ErrorView } from "@/components/error-view";
 
-export default function ComparisonError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error('Comparison error:', error);
-  }, [error]);
-
+// Missing comparisons call notFound() and get app/not-found.tsx instead
+export default function ComparisonError(props: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-4xl font-bold text-red-600">Comparison Not Found</h1>
-        <p className="text-muted-foreground">
-          The comparison you&apos;re looking for doesn&apos;t exist or couldn&apos;t be loaded.
-        </p>
-        {error.message && (
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="text-sm font-mono text-left break-all">{error.message}</p>
-          </div>
-        )}
-        <div className="flex gap-4 justify-center">
-          <button
-            onClick={reset}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <Link
-            href="/comparisons"
-            className="px-4 py-2 border border-input rounded-md hover:bg-accent"
-          >
-            Browse Comparisons
-          </Link>
-        </div>
-      </div>
-    </div>
+    <ErrorView
+      {...props}
+      title="Couldn't load comparisons"
+      message="Something went wrong while loading this page. Please try again."
+      link={{ href: "/comparisons", label: "Browse comparisons" }}
+    />
   );
 }

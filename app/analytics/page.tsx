@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { PerformanceCharts } from "@/components/performance-charts";
@@ -6,6 +7,18 @@ import { getModelPerformance } from "@/lib/data/public";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Analytics",
+  description:
+    "Generation time, cost and vote statistics for AI video generation models, from every ModelArena comparison.",
+  openGraph: {
+    title: "AI Video Model Analytics | ModelArena",
+    description:
+      "Generation time, cost and vote statistics for AI video generation models, from every ModelArena comparison.",
+    images: ["/og-image.png"],
+  },
+};
 
 export default async function AnalyticsPage() {
   // Aggregated in the database; averages skip videos without timing data

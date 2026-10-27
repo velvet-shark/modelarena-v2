@@ -261,6 +261,22 @@ export const getComparisonList = cached(async (params: ComparisonListParams) => 
   return { comparisons, tags, total, page, pageCount, sort };
 }, "comparison-list");
 
+// Tags that have at least one public comparison, with that count
+export const getTagList = cached(
+  () =>
+    prisma.tag.findMany({
+      where: { comparisons: { some: { isPublic: true } } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: { select: { comparisons: { where: { isPublic: true } } } },
+      },
+      orderBy: { name: "asc" },
+    }),
+  "tag-list"
+);
+
 // ---------------------------------------------------------------------------
 // Comparison detail (cache() dedupes generateMetadata + page within a request)
 // ---------------------------------------------------------------------------
