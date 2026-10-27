@@ -24,5 +24,4 @@ coverage
 *.spec.ts
 *.spec.tsx
 __tests__
-prisma/migrations
 .claude

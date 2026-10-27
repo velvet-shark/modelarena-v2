@@ -68,11 +68,11 @@ model Comparison {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
+  // Single-column isPublic/isFeatured lookups use the composites' prefixes
   @@index([type])
-  @@index([isPublic])
-  @@index([isFeatured])
   @@index([createdAt])
   @@index([isPublic, createdAt])
+  @@index([isPublic, isFeatured, createdAt]) // public lists, featured first
   @@index([isFeatured, createdAt])
 }
 
@@ -125,12 +125,12 @@ model Video {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // The unique also serves comparisonId lookups; status and modelId lookups
+  // use the composites' prefixes. Per-comparison voteCount sorts touch only a
+  // handful of rows, so voteCount has no index of its own.
   @@unique([comparisonId, modelId, createdAt])
-  @@index([status])
-  @@index([comparisonId])
-  @@index([modelId])
-  @@index([voteCount])
   @@index([status, comparisonId])
+  @@index([modelId, status, createdAt]) // model page: newest completed videos
 }
 
 enum VideoStatus {

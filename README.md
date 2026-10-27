@@ -114,6 +114,23 @@ docker compose logs -f app
 docker compose down
 ```
 
+### Database migrations
+
+Schema changes ship as Prisma migrations in `prisma/migrations`. Apply them with `pnpm db:migrate` (`prisma migrate deploy`), from your machine with `DATABASE_URL` pointing at the database, or inside the worker container (it has the Prisma CLI).
+
+A database created earlier with `db push` needs a one-time baseline, so Prisma doesn't try to recreate existing tables. `0_init` matches the schema before migrations were added:
+
+```bash
+# 1. Should list only the index changes from 20261027000000_review_indexes
+pnpm prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma
+
+# 2. Mark the baseline as applied, then apply the rest
+pnpm prisma migrate resolve --applied 0_init
+pnpm db:migrate
+```
+
+If step 1 shows other differences, the database drifted from `0_init`; sort that out before step 2.
+
 ## Usage
 
 ### Creating a Comparison
@@ -213,7 +230,8 @@ pnpm lint             # Run ESLint
 pnpm typecheck        # TypeScript check
 
 # Database
-pnpm db:push          # Push schema changes
+pnpm db:push          # Push schema changes (local dev)
+pnpm db:migrate       # Apply migrations (production)
 pnpm db:seed          # Seed initial data
 pnpm db:studio        # Open Prisma Studio
 
