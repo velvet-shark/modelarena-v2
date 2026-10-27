@@ -2,8 +2,16 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  CopyObjectCommand,
+  NotFound,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import ffmpeg from "fluent-ffmpeg";
+import { createReadStream, createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import type { Readable } from "stream";
 
 // Initialize R2 client
 const r2Client = new S3Client({
@@ -90,6 +98,68 @@ export async function deleteFile(key: string): Promise<void> {
       Key: key,
     })
   );
+}
+
+// Streams from disk, so large manual uploads never sit in memory
+export async function uploadFile(
+  path: string,
+  key: string,
+  contentType: string,
+  size: number
+): Promise<{ url: string; key: string }> {
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: createReadStream(path),
+      ContentLength: size,
+      ContentType: contentType,
+    })
+  );
+  return { key, url: `${PUBLIC_URL}/${key}` };
+}
+
+// Lets the browser PUT a file straight to R2 (needs a CORS rule on the bucket)
+export function presignUpload(key: string, contentType: string, expiresIn = 15 * 60) {
+  return getSignedUrl(
+    r2Client,
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType }),
+    { expiresIn }
+  );
+}
+
+export async function headObject(
+  key: string
+): Promise<{ size: number; contentType: string | undefined } | null> {
+  try {
+    const head = await r2Client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+    return { size: head.ContentLength ?? 0, contentType: head.ContentType };
+  } catch (error) {
+    if (error instanceof NotFound) return null;
+    throw error;
+  }
+}
+
+export async function downloadObjectToFile(key: string, path: string): Promise<void> {
+  const object = await r2Client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  await pipeline(object.Body as Readable, createWriteStream(path));
+}
+
+export async function copyObject(
+  from: string,
+  to: string,
+  contentType: string
+): Promise<{ url: string; key: string }> {
+  await r2Client.send(
+    new CopyObjectCommand({
+      Bucket: BUCKET,
+      CopySource: `${BUCKET}/${from}`,
+      Key: to,
+      ContentType: contentType,
+      MetadataDirective: "REPLACE",
+    })
+  );
+  return { key: to, url: `${PUBLIC_URL}/${to}` };
 }
 
 // Best effort: a leftover object only costs storage, so log instead of failing

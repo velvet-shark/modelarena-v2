@@ -33,6 +33,45 @@ interface VideoUploadFormProps {
   models: UploadModelOption[];
 }
 
+const SUPPORTED_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+
+// PUT the file straight to R2, so large videos skip the app server and any
+// proxy body limit. Returns null when that isn't possible (no CORS rule on
+// the bucket), and the caller falls back to uploading through the app.
+async function uploadToR2(file: File): Promise<string | null> {
+  const presign = await fetch("/api/upload/video/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contentType: file.type, size: file.size }),
+  });
+  const result = await presign.json().catch(() => ({}));
+  if (!presign.ok) {
+    throw new Error(result.error || `Upload failed (${presign.status})`);
+  }
+
+  try {
+    const put = await fetch(result.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (put.ok) return result.key;
+    console.warn(`Direct upload failed (${put.status}), uploading through the app`);
+  } catch (err) {
+    console.warn("Direct upload blocked, uploading through the app:", err);
+  }
+  return null;
+}
+
+function toFormData(file: File, fields: Record<string, string>) {
+  const data = new FormData();
+  data.append("video", file);
+  for (const [name, value] of Object.entries(fields)) {
+    if (value) data.append(name, value);
+  }
+  return data;
+}
+
 export function VideoUploadForm({ comparisons, models }: VideoUploadFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -59,23 +98,34 @@ export function VideoUploadForm({ comparisons, models }: VideoUploadFormProps) {
       return;
     }
 
+    if (!SUPPORTED_TYPES.includes(formData.video.type)) {
+      setError("Unsupported format: use MP4, MOV or WebM");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const data = new FormData();
-      data.append("video", formData.video);
-      data.append("comparisonId", formData.comparisonId);
-      data.append("modelId", formData.modelId);
-      if (formData.generationTime)
-        data.append("generationTime", formData.generationTime);
-      if (formData.cost) data.append("cost", formData.cost);
-      if (formData.duration) data.append("duration", formData.duration);
-      if (formData.notes) data.append("notes", formData.notes);
+      const fields = {
+        comparisonId: formData.comparisonId,
+        modelId: formData.modelId,
+        generationTime: formData.generationTime,
+        cost: formData.cost,
+        duration: formData.duration,
+        notes: formData.notes,
+      };
 
-      const response = await fetch("/api/upload/video", {
-        method: "POST",
-        body: data,
-      });
+      const stagingKey = await uploadToR2(formData.video);
+      const response = stagingKey
+        ? await fetch("/api/upload/video/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: stagingKey, ...fields }),
+          })
+        : await fetch("/api/upload/video", {
+            method: "POST",
+            body: toFormData(formData.video, fields),
+          });
 
       const result = await response.json().catch(() => ({}));
 
@@ -184,7 +234,7 @@ export function VideoUploadForm({ comparisons, models }: VideoUploadFormProps) {
           <Input
             id="video"
             type="file"
-            accept="video/*"
+            accept="video/mp4,video/quicktime,video/webm"
             onChange={(e) =>
               setFormData({ ...formData, video: e.target.files?.[0] || null })
             }
