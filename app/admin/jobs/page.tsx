@@ -10,22 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useJobStream } from "@/hooks/use-job-stream";
-
-interface Job {
-  id: string;
-  type: string;
-  status: string;
-  payload: any;
-  result: any;
-  error: string | null;
-  attempts: number;
-  maxAttempts: number;
-  videoId: string | null;
-  comparisonId: string | null;
-  createdAt: string;
-  startedAt: string | null;
-  completedAt: string | null;
-}
+import type { JobSummary as Job } from "@/src/lib/queue/monitor";
 
 export default function JobsPage() {
   const [filter, setFilter] = useState<string>("all");
@@ -35,7 +20,7 @@ export default function JobsPage() {
   const jobs = useMemo(() => {
     if (!data?.jobs) return [];
     if (filter === "all") return data.jobs;
-    return data.jobs.filter((job: Job) => job.status === filter);
+    return data.jobs.filter((job) => job.status === filter);
   }, [data, filter]);
 
   const stats = data?.stats || {
@@ -92,6 +77,13 @@ export default function JobsPage() {
           <span className="text-sm text-muted-foreground">
             {connected ? "Live" : "Offline"}
           </span>
+          {data && (
+            <span
+              className={`text-sm ${data.workers > 0 ? "text-muted-foreground" : "text-red-600 font-medium"}`}
+            >
+              {data.workers} worker{data.workers !== 1 ? "s" : ""} online
+            </span>
+          )}
           <Button
             variant={realtimeEnabled ? "default" : "outline"}
             onClick={() => setRealtimeEnabled(!realtimeEnabled)}
@@ -181,9 +173,9 @@ export default function JobsPage() {
                       </span>
                     </td>
                     <td className="p-3">
-                      {job.videoId ? (
+                      {job.videoId && job.comparisonId ? (
                         <a
-                          href={`/admin/comparisons?video=${job.videoId}`}
+                          href={`/admin/comparisons/${job.comparisonId}`}
                           className="text-blue-600 hover:underline font-mono text-xs"
                         >
                           {job.videoId.substring(0, 8)}...

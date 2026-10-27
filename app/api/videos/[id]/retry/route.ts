@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getGenerationQueue } from "@/src/lib/queue";
+import { buildGenerationJob, enqueueGenerations, endpointFor } from "@/src/lib/queue/enqueue";
 
 // POST /api/videos/[id]/retry - Retry failed video generation
 export async function POST(
@@ -25,7 +25,7 @@ export async function POST(
         },
         comparison: {
           include: {
-            sourceImage: true,
+            sourceImage: { select: { url: true } },
           },
         },
       },
@@ -35,19 +35,17 @@ export async function POST(
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // Check if video is in a retryable state
-    if (video.status !== "FAILED" && video.status !== "CANCELLED") {
+    // Text-to-video comparisons need the T2V endpoint, not model.endpoint
+    if (!endpointFor(video.model, video.comparison.type)) {
       return NextResponse.json(
-        {
-          error: `Video is not in a retryable state. Current status: ${video.status}`,
-        },
+        { error: `${video.model.name} has no ${video.comparison.type} endpoint` },
         { status: 400 }
       );
     }
 
-    // Reset video status and clear error
-    await prisma.video.update({
-      where: { id: videoId },
+    // Reset only if still failed/cancelled, so a double click can't queue twice
+    const { count } = await prisma.video.updateMany({
+      where: { id: videoId, status: { in: ["FAILED", "CANCELLED"] } },
       data: {
         status: "QUEUED",
         errorMessage: null,
@@ -65,16 +63,25 @@ export async function POST(
       },
     });
 
-    // Add job to queue
-    await getGenerationQueue().add("generate", {
-      videoId: video.id,
-      comparisonId: video.comparisonId,
-      modelId: video.modelId,
-      prompt: video.comparison.prompt,
-      sourceImageUrl: video.comparison.sourceImage?.url,
-      modelEndpoint: video.model.endpoint || "",
-      providerName: video.model.provider.name,
-    });
+    if (count === 0) {
+      return NextResponse.json(
+        {
+          error: `Video is not in a retryable state. Current status: ${video.status}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Same endpoint and saved parameters (duration, aspect ratio, seed) as the original run
+    try {
+      await enqueueGenerations([buildGenerationJob(video.id, video.comparison, video.model)]);
+    } catch (queueError) {
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { status: "FAILED", errorMessage: "Failed to add job to queue" },
+      });
+      throw queueError;
+    }
 
     return NextResponse.json({
       success: true,

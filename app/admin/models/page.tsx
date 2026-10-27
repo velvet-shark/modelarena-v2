@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,6 +89,12 @@ export default function ModelsPage() {
         fetch("/api/admin/capabilities"),
       ]);
 
+      if (!modelsRes.ok || !providersRes.ok || !capabilitiesRes.ok) {
+        throw new Error(
+          `Failed to load (${modelsRes.status}/${providersRes.status}/${capabilitiesRes.status})`
+        );
+      }
+
       const modelsData = await modelsRes.json();
       const providersData = await providersRes.json();
       const capabilitiesData = await capabilitiesRes.json();
@@ -98,6 +104,7 @@ export default function ModelsPage() {
       setCapabilities(capabilitiesData.capabilities || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      alert(error instanceof Error ? error.message : "Failed to load models");
     } finally {
       setLoading(false);
     }
@@ -446,8 +453,8 @@ export default function ModelsPage() {
             </thead>
             <tbody className="divide-y">
               {models.map((model) => (
-                <>
-                  <tr key={model.id} className="hover:bg-muted/50">
+                <Fragment key={model.id}>
+                  <tr className="hover:bg-muted/50">
                     <td className="p-3">
                       <button
                         onClick={() => toggleExpanded(model.id)}
@@ -555,7 +562,7 @@ export default function ModelsPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

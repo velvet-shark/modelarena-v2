@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { getJobStats, getRecentJobs, getWorkerCount } from "@/src/lib/queue/monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -9,50 +9,57 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const encoder = new TextEncoder();
+  let interval: ReturnType<typeof setInterval> | undefined;
+  let closed = false;
 
   const stream = new ReadableStream({
     async start(controller) {
-      const sendUpdate = async () => {
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(interval);
         try {
-          // Get job stats
-          const [pending, active, completed, failed] = await Promise.all([
-            prisma.job.count({ where: { status: "pending" } }),
-            prisma.job.count({ where: { status: "active" } }),
-            prisma.job.count({ where: { status: "completed" } }),
-            prisma.job.count({ where: { status: "failed" } }),
+          controller.close();
+        } catch {
+          // Already closed by the runtime
+        }
+      };
+
+      const sendUpdate = async () => {
+        if (closed) return;
+        try {
+          const [stats, jobs, workers] = await Promise.all([
+            getJobStats(),
+            getRecentJobs(50),
+            getWorkerCount(),
           ]);
 
-          // Get recent jobs
-          const jobs = await prisma.job.findMany({
-            orderBy: { createdAt: "desc" },
-            take: 50,
-          });
-
           const data = {
-            stats: { pending, active, completed, failed },
+            stats,
             jobs,
+            workers,
             timestamp: new Date().toISOString(),
           };
 
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
+          if (!closed) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          }
         } catch (error) {
           console.error("SSE error:", error);
         }
       };
 
+      req.signal.addEventListener("abort", close);
+
       // Send initial update
       await sendUpdate();
 
       // Send updates every 3 seconds
-      const interval = setInterval(sendUpdate, 3000);
-
-      // Cleanup on close
-      req.signal.addEventListener("abort", () => {
-        clearInterval(interval);
-        controller.close();
-      });
+      interval = setInterval(sendUpdate, 3000);
+    },
+    cancel() {
+      closed = true;
+      clearInterval(interval);
     },
   });
 

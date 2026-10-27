@@ -14,6 +14,8 @@ type Model = {
   id: string;
   slug: string;
   name: string;
+  endpoint: string | null;
+  endpointT2V: string | null;
   provider: {
     id: string;
     name: string;
@@ -41,8 +43,23 @@ export function GenerateForm({ models }: GenerateFormProps) {
   const [sourceImagePreview, setSourceImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Only models with an endpoint for the chosen type (the API rejects others)
+  const isModelCompatible = (model: Model, t: typeof type = type) =>
+    t === "image-to-video" ? !!model.endpoint : !!model.endpointT2V;
+  const compatibleModels = models.filter((m) => isModelCompatible(m));
+
+  const changeType = (next: typeof type) => {
+    setType(next);
+    setSelectedModels((prev) =>
+      prev.filter((id) => {
+        const model = models.find((m) => m.id === id);
+        return model ? isModelCompatible(model, next) : false;
+      })
+    );
+  };
+
   // Group models by provider
-  const modelsByProvider = models.reduce((acc, model) => {
+  const modelsByProvider = compatibleModels.reduce((acc, model) => {
     const providerName = model.provider.displayName;
     if (!acc[providerName]) {
       acc[providerName] = [];
@@ -56,7 +73,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
   };
 
   const selectAll = () => {
-    setSelectedModels(models.map((m) => m.id));
+    setSelectedModels(compatibleModels.map((m) => m.id));
   };
 
   const deselectAll = () => {
@@ -189,7 +206,7 @@ export function GenerateForm({ models }: GenerateFormProps) {
 
         <div className="space-y-2">
           <Label>Type</Label>
-          <RadioGroup value={type} onValueChange={(v) => setType(v as typeof type)}>
+          <RadioGroup value={type} onValueChange={(v) => changeType(v as typeof type)}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="image-to-video" id="image-to-video" />
               <Label htmlFor="image-to-video" className="font-normal cursor-pointer">

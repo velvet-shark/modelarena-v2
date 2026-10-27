@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { JobStats, JobSummary } from "@/src/lib/queue/monitor";
 
 interface JobStreamData {
-  stats: {
-    pending: number;
-    active: number;
-    completed: number;
-    failed: number;
-  };
-  jobs: any[];
+  stats: JobStats;
+  jobs: JobSummary[];
+  workers: number;
   timestamp: string;
 }
 
@@ -18,11 +15,17 @@ export function useJobStream(enabled: boolean = true) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setConnected(false);
+      return;
+    }
 
     let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
 
     const connect = () => {
+      if (cancelled) return;
       eventSource = new EventSource("/api/jobs/stream");
 
       eventSource.onopen = () => {
@@ -31,8 +34,7 @@ export function useJobStream(enabled: boolean = true) {
 
       eventSource.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          setData(data);
+          setData(JSON.parse(event.data));
         } catch (error) {
           console.error("Failed to parse SSE data:", error);
         }
@@ -42,15 +44,18 @@ export function useJobStream(enabled: boolean = true) {
         setConnected(false);
         eventSource?.close();
 
-        // Reconnect after 5 seconds
-        setTimeout(connect, 5000);
+        // Reconnect after 5 seconds, unless the hook was turned off or unmounted
+        if (!cancelled) reconnectTimer = setTimeout(connect, 5000);
       };
     };
 
     connect();
 
     return () => {
+      cancelled = true;
+      clearTimeout(reconnectTimer);
       eventSource?.close();
+      setConnected(false);
     };
   }, [enabled]);
 

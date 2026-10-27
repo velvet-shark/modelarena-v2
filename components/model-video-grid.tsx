@@ -153,7 +153,7 @@ function VideoCard({
           </Link>
 
           <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-            {video.generationTime && (
+            {video.generationTime != null && (
               <span>{video.generationTime.toFixed(1)}s</span>
             )}
             {video.cost !== null && video.cost > 0 && (
@@ -394,7 +394,7 @@ function VideoCardGrid({
         </Link>
 
         <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-          {video.generationTime && (
+          {video.generationTime != null && (
             <span>{video.generationTime.toFixed(1)}s</span>
           )}
           {video.cost !== null && video.cost > 0 && (

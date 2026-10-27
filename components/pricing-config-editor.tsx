@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,9 +22,15 @@ export function PricingConfigEditor({
   onChange,
 }: PricingConfigEditorProps) {
   const model = value?.model || "per-second";
-  const [useAudioPricing, setUseAudioPricing] = useState(
-    typeof (value as any)?.pricePerSecond === "object"
-  );
+  // Derived, so it stays right when the pricing model or value changes
+  const useAudioPricing = typeof (value as any)?.pricePerSecond === "object";
+
+  // Empty or partial input would otherwise store NaN (saved as null)
+  const num = (raw: string, parse: (v: string) => number = parseFloat) => {
+    const n = parse(raw);
+    return Number.isNaN(n) ? 0 : n;
+  };
+  const int = (v: string) => parseInt(v, 10);
 
   const updateConfig = (updates: Partial<any>) => {
     if (!value) {
@@ -83,7 +88,7 @@ export function PricingConfigEditor({
                   onChange={(e) =>
                     updateConfig({
                       pricePerSecond: {
-                        withoutAudio: parseFloat(e.target.value),
+                        withoutAudio: num(e.target.value),
                         withAudio:
                           perSecondConfig.pricePerSecond?.withAudio || 0,
                       },
@@ -102,7 +107,7 @@ export function PricingConfigEditor({
                       pricePerSecond: {
                         withoutAudio:
                           perSecondConfig.pricePerSecond?.withoutAudio || 0,
-                        withAudio: parseFloat(e.target.value),
+                        withAudio: num(e.target.value),
                       },
                     })
                   }
@@ -123,7 +128,7 @@ export function PricingConfigEditor({
                     : 0
                 }
                 onChange={(e) =>
-                  updateConfig({ pricePerSecond: parseFloat(e.target.value) })
+                  updateConfig({ pricePerSecond: num(e.target.value) })
                 }
               />
             </div>
@@ -141,7 +146,7 @@ export function PricingConfigEditor({
                 step="0.0001"
                 value={basePlusConfig.basePrice || 0}
                 onChange={(e) =>
-                  updateConfig({ basePrice: parseFloat(e.target.value) })
+                  updateConfig({ basePrice: num(e.target.value) })
                 }
               />
             </div>
@@ -152,7 +157,7 @@ export function PricingConfigEditor({
                 step="0.1"
                 value={basePlusConfig.baseDuration || 0}
                 onChange={(e) =>
-                  updateConfig({ baseDuration: parseFloat(e.target.value) })
+                  updateConfig({ baseDuration: num(e.target.value) })
                 }
               />
             </div>
@@ -164,7 +169,7 @@ export function PricingConfigEditor({
                 value={basePlusConfig.pricePerExtraSecond || 0}
                 onChange={(e) =>
                   updateConfig({
-                    pricePerExtraSecond: parseFloat(e.target.value),
+                    pricePerExtraSecond: num(e.target.value),
                   })
                 }
               />
@@ -182,7 +187,7 @@ export function PricingConfigEditor({
               step="0.0001"
               value={flatRateConfig.price || 0}
               onChange={(e) =>
-                updateConfig({ price: parseFloat(e.target.value) })
+                updateConfig({ price: num(e.target.value) })
               }
             />
           </div>
@@ -217,8 +222,10 @@ export function PricingConfigEditor({
                       placeholder="Max Width"
                       value={tier.maxWidth}
                       onChange={(e) => {
-                        const newTiers = [...resConfig.tiers];
-                        newTiers[idx].maxWidth = parseInt(e.target.value);
+                        // Copy the tier: mutating it would change the parent's state in place
+                        const newTiers = resConfig.tiers.map((t: any, i: number) =>
+                          i === idx ? { ...t, maxWidth: num(e.target.value, int) } : t
+                        );
                         updateConfig({ tiers: newTiers });
                       }}
                     />
@@ -227,8 +234,10 @@ export function PricingConfigEditor({
                       placeholder="Max Height"
                       value={tier.maxHeight}
                       onChange={(e) => {
-                        const newTiers = [...resConfig.tiers];
-                        newTiers[idx].maxHeight = parseInt(e.target.value);
+                        // Copy the tier: mutating it would change the parent's state in place
+                        const newTiers = resConfig.tiers.map((t: any, i: number) =>
+                          i === idx ? { ...t, maxHeight: num(e.target.value, int) } : t
+                        );
                         updateConfig({ tiers: newTiers });
                       }}
                     />
@@ -238,8 +247,10 @@ export function PricingConfigEditor({
                       placeholder="Price"
                       value={tier.price}
                       onChange={(e) => {
-                        const newTiers = [...resConfig.tiers];
-                        newTiers[idx].price = parseFloat(e.target.value);
+                        // Copy the tier: mutating it would change the parent's state in place
+                        const newTiers = resConfig.tiers.map((t: any, i: number) =>
+                          i === idx ? { ...t, price: num(e.target.value) } : t
+                        );
                         updateConfig({ tiers: newTiers });
                       }}
                     />
@@ -307,7 +318,6 @@ export function PricingConfigEditor({
           <Checkbox
             checked={useAudioPricing}
             onCheckedChange={(checked) => {
-              setUseAudioPricing(checked as boolean);
               if (checked) {
                 updateConfig({
                   pricePerSecond: { withoutAudio: 0, withAudio: 0 },

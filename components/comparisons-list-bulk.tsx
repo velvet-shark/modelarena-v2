@@ -80,6 +80,37 @@ export function ComparisonsListBulk({
     });
   }, [comparisons, searchQuery, typeFilter, statusFilter]);
 
+  // Act only on selected rows the current filters show, so "Delete N" never
+  // touches comparisons the admin can't see
+  const visibleSelected = useMemo(
+    () => filteredComparisons.filter((c) => selected.has(c.id)).map((c) => c.id),
+    [filteredComparisons, selected]
+  );
+
+  // Runs one request per id; keeps failed ids selected and reports them
+  const runBulk = async (
+    label: string,
+    request: (id: string) => Promise<Response>
+  ) => {
+    const ids = visibleSelected;
+    setLoading(true);
+    try {
+      const results = await Promise.allSettled(ids.map(request));
+      const failed = ids.filter((_, i) => {
+        const r = results[i];
+        return r.status === "rejected" || !r.value.ok;
+      });
+
+      router.refresh();
+      setSelected(new Set(failed));
+      if (failed.length > 0) {
+        alert(`Failed to ${label} ${failed.length} of ${ids.length} comparison(s). They are still selected.`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleSelection = (id: string) => {
     const newSelected = new Set(selected);
     if (newSelected.has(id)) {
@@ -91,7 +122,7 @@ export function ComparisonsListBulk({
   };
 
   const selectAll = () => {
-    if (selected.size === filteredComparisons.length && filteredComparisons.length > 0) {
+    if (visibleSelected.length === filteredComparisons.length && filteredComparisons.length > 0) {
       setSelected(new Set());
     } else {
       setSelected(new Set(filteredComparisons.map((c) => c.id)));
@@ -102,63 +133,39 @@ export function ComparisonsListBulk({
     isPublic?: boolean;
     isFeatured?: boolean;
   }) => {
-    if (selected.size === 0) {
+    if (visibleSelected.length === 0) {
       alert("No comparisons selected");
       return;
     }
 
-    setLoading(true);
-    try {
-      await Promise.all(
-        Array.from(selected).map((id) =>
-          fetch(`/api/comparisons/${id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updates),
-          })
-        )
-      );
-
-      router.refresh();
-      setSelected(new Set());
-    } catch (error) {
-      alert("Failed to update comparisons");
-    } finally {
-      setLoading(false);
-    }
+    await runBulk("update", (id) =>
+      fetch(`/api/comparisons/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      })
+    );
   };
 
   const bulkDelete = async () => {
-    if (selected.size === 0) {
+    if (visibleSelected.length === 0) {
       alert("No comparisons selected");
       return;
     }
 
     if (
       !confirm(
-        `Are you sure you want to delete ${selected.size} comparison(s)? This cannot be undone.`
+        `Are you sure you want to delete ${visibleSelected.length} comparison(s)? This cannot be undone.`
       )
     ) {
       return;
     }
 
-    setLoading(true);
-    try {
-      await Promise.all(
-        Array.from(selected).map((id) =>
-          fetch(`/api/comparisons/${id}`, {
-            method: "DELETE",
-          })
-        )
-      );
-
-      router.refresh();
-      setSelected(new Set());
-    } catch (error) {
-      alert("Failed to delete comparisons");
-    } finally {
-      setLoading(false);
-    }
+    await runBulk("delete", (id) =>
+      fetch(`/api/comparisons/${id}`, {
+        method: "DELETE",
+      })
+    );
   };
 
   return (
@@ -210,11 +217,11 @@ export function ComparisonsListBulk({
         </div>
       </div>
 
-      {selected.size > 0 && (
+      {visibleSelected.length > 0 && (
         <div className="border rounded-lg p-4 bg-muted/50">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium">
-              {selected.size} selected
+              {visibleSelected.length} selected
             </div>
             <div className="flex gap-2">
               <Button
@@ -264,7 +271,7 @@ export function ComparisonsListBulk({
 
       <div className="flex items-center gap-2 mb-2">
         <Checkbox
-          checked={selected.size === filteredComparisons.length && filteredComparisons.length > 0}
+          checked={visibleSelected.length === filteredComparisons.length && filteredComparisons.length > 0}
           onCheckedChange={selectAll}
         />
         <span className="text-sm text-muted-foreground">

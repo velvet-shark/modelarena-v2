@@ -227,8 +227,8 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                 {video.status === "COMPLETED" && (
                   <>
                     <div className="flex gap-3 text-xs text-muted-foreground">
-                      {video.generationTime && <span>⏱ {video.generationTime.toFixed(1)}s</span>}
-                      {video.duration && <span>📹 {video.duration.toFixed(1)}s</span>}
+                      {video.generationTime != null && <span>⏱ {video.generationTime.toFixed(1)}s</span>}
+                      {video.duration != null && <span>📹 {video.duration.toFixed(1)}s</span>}
                       {video.width && video.height && (
                         <span>
                           📐 {video.width}×{video.height}

@@ -299,19 +299,19 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
       });
       setIsPlaying(false);
     } else {
-      // Play all videos with proper error handling
-      const playPromises = Array.from(videoRefs.current.values()).map(
-        async (video) => {
+      // Flip the button right away; waiting for every play() (the slowest
+      // video) left it saying "Play All" and a second click restarted everything
+      setIsPlaying(true);
+      await Promise.all(
+        Array.from(videoRefs.current.values()).map(async (video) => {
           video.currentTime = 0;
           try {
             await video.play();
           } catch {
             // Ignore autoplay failures (user hasn't interacted yet, etc.)
           }
-        }
+        })
       );
-      await Promise.all(playPromises);
-      setIsPlaying(true);
     }
   };
 
@@ -327,8 +327,8 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   const closeModal = () => {
     setSelectedVideo(null);
     setCopied(false);
-    // Remove hash from URL
-    window.history.replaceState(null, "", window.location.pathname);
+    // Remove hash from URL, keeping any query string
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
   };
 
   const copyVideoLink = async () => {

@@ -11,9 +11,14 @@ export default async function GeneratePage() {
   // Fetch all active models grouped by provider
   const models = await prisma.model.findMany({
     where: { isActive: true },
-    include: {
-      provider: true,
-      capabilities: true,
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      endpoint: true,
+      endpointT2V: true,
+      provider: { select: { id: true, name: true, displayName: true } },
+      capabilities: { select: { id: true, name: true } },
     },
     orderBy: [{ provider: { name: "asc" } }, { name: "asc" }],
   });

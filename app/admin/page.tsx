@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { requireAdminPage } from "@/lib/auth";
+import { getJobStatsOrNull } from "@/src/lib/queue/monitor";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function AdminDashboard() {
     totalVideos,
     activeModels,
     videoStatusCounts,
-    jobStatusCounts,
+    queueStats,
     recentComparisons,
   ] = await Promise.all([
     prisma.comparison.count(),
@@ -28,10 +29,7 @@ export default async function AdminDashboard() {
       by: ["status"],
       _count: { status: true },
     }),
-    prisma.job.groupBy({
-      by: ["status"],
-      _count: { status: true },
-    }),
+    getJobStatsOrNull(),
     prisma.comparison.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -51,12 +49,8 @@ export default async function AdminDashboard() {
     failed: videoStatusCounts.find((s) => s.status === "FAILED")?._count.status || 0,
   };
 
-  const jobStats = {
-    pending: jobStatusCounts.find((s) => s.status === "pending")?._count.status || 0,
-    active: jobStatusCounts.find((s) => s.status === "active")?._count.status || 0,
-    completed: jobStatusCounts.find((s) => s.status === "completed")?._count.status || 0,
-    failed: jobStatusCounts.find((s) => s.status === "failed")?._count.status || 0,
-  };
+  // From BullMQ; zeros if Redis is unreachable
+  const jobStats = queueStats ?? { pending: 0, active: 0, completed: 0, failed: 0 };
 
   return (
     <div className="space-y-8">

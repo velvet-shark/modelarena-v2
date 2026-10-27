@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getGenerationQueue } from "@/src/lib/queue";
+import {
+  buildGenerationJob,
+  enqueueGenerations,
+  modelsMissingEndpoint,
+} from "@/src/lib/queue/enqueue";
 import { apiComparisonSelect } from "@/lib/data/public";
 import { z } from "zod";
 
 // Validation schema
 const createComparisonSchema = z.object({
   title: z.string().min(1).max(200),
-  description: z.string().optional(),
+  description: z.string().max(5000).optional(),
   type: z.enum(["image-to-video", "text-to-video"]),
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(10000),
   sourceImageId: z.string().optional(),
   modelIds: z.array(z.string()).min(1).max(20),
   isPublic: z.boolean().optional().default(false),
   isFeatured: z.boolean().optional().default(false),
-  duration: z.number().optional(),
+  // Stored in Int columns
+  duration: z.number().int().positive().optional(),
   aspectRatio: z.string().optional(),
-  seed: z.number().optional(),
+  seed: z.number().int().optional(),
   additionalParams: z.record(z.unknown()).optional(),
 });
 
@@ -52,15 +57,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createComparisonSchema.parse(body);
 
-    // Generate slug from title
-    const slug = data.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+    // Generate slug from title (fallback for titles with no ASCII letters)
+    const slug =
+      data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || "comparison";
 
     // Check if slug already exists
     const existingComparison = await prisma.comparison.findUnique({
       where: { slug },
+      select: { id: true },
     });
 
     const finalSlug = existingComparison
@@ -72,6 +79,7 @@ export async function POST(request: NextRequest) {
     if (data.sourceImageId) {
       sourceImage = await prisma.sourceImage.findUnique({
         where: { id: data.sourceImageId },
+        select: { url: true },
       });
       if (!sourceImage) {
         return NextResponse.json(
@@ -92,76 +100,61 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (models.length !== data.modelIds.length) {
+    if (models.length !== new Set(data.modelIds).size) {
       return NextResponse.json(
         { error: "One or more models not found or inactive" },
         { status: 404 }
       );
     }
 
-    // Create comparison and videos in a transaction
-    const comparison = await prisma.$transaction(async (tx) => {
-      // Create comparison
-      const comp = await tx.comparison.create({
-        data: {
-          slug: finalSlug,
-          title: data.title,
-          description: data.description,
-          type: data.type,
-          prompt: data.prompt,
-          sourceImageId: data.sourceImageId,
-          isPublic: data.isPublic,
-          isFeatured: data.isFeatured,
-          // Persist generation parameters for adding new models later
-          aspectRatio: data.aspectRatio,
-          duration: data.duration,
-          seed: data.seed,
-        },
-      });
+    // Reject up front instead of creating videos that would sit in QUEUED forever
+    const unsupported = modelsMissingEndpoint(models, data.type);
+    if (unsupported.length > 0) {
+      return NextResponse.json(
+        { error: `No ${data.type} endpoint for: ${unsupported.join(", ")}` },
+        { status: 400 }
+      );
+    }
 
-      // Create video records for each model
-      const videos = await Promise.all(
-        models.map((model) =>
-          tx.video.create({
-            data: {
-              comparisonId: comp.id,
-              modelId: model.id,
-              status: "QUEUED",
-            },
-          })
+    // Comparison and its videos in one write
+    const comparison = await prisma.comparison.create({
+      data: {
+        slug: finalSlug,
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        prompt: data.prompt,
+        sourceImageId: data.sourceImageId,
+        isPublic: data.isPublic,
+        isFeatured: data.isFeatured,
+        // Persist generation parameters for adding new models later
+        aspectRatio: data.aspectRatio,
+        duration: data.duration,
+        seed: data.seed,
+        videos: {
+          create: models.map((model) => ({ modelId: model.id, status: "QUEUED" as const })),
+        },
+      },
+      include: { videos: { select: { id: true, modelId: true } } },
+    });
+
+    // Enqueue only after the rows are committed (see enqueueGenerations)
+    const modelsById = new Map(models.map((m) => [m.id, m]));
+    const jobComparison = { ...comparison, sourceImage };
+    try {
+      await enqueueGenerations(
+        comparison.videos.map((video) =>
+          buildGenerationJob(video.id, jobComparison, modelsById.get(video.modelId)!, data.additionalParams)
         )
       );
-
-      // Add jobs to queue for each video
-      const isImageToVideo = data.type === "image-to-video";
-      for (let i = 0; i < videos.length; i++) {
-        const video = videos[i];
-        const model = models[i];
-
-        // Select correct endpoint based on generation type
-        const endpoint = isImageToVideo ? model.endpoint : model.endpointT2V;
-        if (!endpoint) {
-          console.warn(`[API] Model ${model.name} has no ${isImageToVideo ? 'I2V' : 'T2V'} endpoint, skipping`);
-          continue;
-        }
-
-        await getGenerationQueue().add("generate", {
-          videoId: video.id,
-          comparisonId: comp.id,
-          modelId: model.id,
-          prompt: data.prompt,
-          sourceImageUrl: sourceImage?.url,
-          modelEndpoint: endpoint,
-          providerName: model.provider.name,
-          duration: data.duration,
-          aspectRatio: data.aspectRatio,
-          seed: data.seed,
-          additionalParams: data.additionalParams,
-        });
-      }
-
-      return comp;
-    });
+    } catch (queueError) {
+      // Leave the videos retryable from the admin UI
+      await prisma.video.updateMany({
+        where: { comparisonId: comparison.id, status: "QUEUED" },
+        data: { status: "FAILED", errorMessage: "Failed to add job to queue" },
+      });
+      throw queueError;
+    }
 
     // Fetch full comparison with videos for response
     const fullComparison = await prisma.comparison.findUnique({

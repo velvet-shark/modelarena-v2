@@ -1,16 +1,16 @@
 import { MetadataRoute } from "next";
+import { siteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXTAUTH_URL || "https://modelarena.ai";
-
   return {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        // Social crawlers honor robots.txt; og:image points at /api/og
+        allow: ["/", "/api/og"],
         disallow: ["/admin/", "/api/", "/auth/"],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

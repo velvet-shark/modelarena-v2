@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getGenerationQueue } from "@/src/lib/queue";
+import {
+  buildGenerationJob,
+  enqueueGenerations,
+  modelsMissingEndpoint,
+} from "@/src/lib/queue/enqueue";
 import { z } from "zod";
 
 const addModelsSchema = z.object({
-  modelIds: z.array(z.string()).min(1),
+  modelIds: z.array(z.string()).min(1).max(20),
 });
 
 // POST /api/comparisons/[id]/add-models - Add models to existing comparison
@@ -27,7 +31,7 @@ export async function POST(
     const comparison = await prisma.comparison.findUnique({
       where: { id },
       include: {
-        sourceImage: true,
+        sourceImage: { select: { url: true } },
         videos: {
           select: {
             modelId: true,
@@ -47,7 +51,7 @@ export async function POST(
     const existingModelIds = new Set(comparison.videos.map((v) => v.modelId));
 
     // Filter out models that already exist
-    const newModelIds = data.modelIds.filter((id) => !existingModelIds.has(id));
+    const newModelIds = [...new Set(data.modelIds)].filter((id) => !existingModelIds.has(id));
 
     if (newModelIds.length === 0) {
       return NextResponse.json(
@@ -74,50 +78,39 @@ export async function POST(
       );
     }
 
-    // Create video records and queue jobs
-    const videos = await prisma.$transaction(async (tx) => {
-      const createdVideos = await Promise.all(
-        models.map((model) =>
-          tx.video.create({
-            data: {
-              comparisonId: comparison.id,
-              modelId: model.id,
-              status: "QUEUED",
-            },
-          })
+    // Reject up front instead of creating videos that would sit in QUEUED forever
+    const unsupported = modelsMissingEndpoint(models, comparison.type);
+    if (unsupported.length > 0) {
+      return NextResponse.json(
+        { error: `No ${comparison.type} endpoint for: ${unsupported.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const videos = await prisma.video.createManyAndReturn({
+      data: models.map((model) => ({
+        comparisonId: comparison.id,
+        modelId: model.id,
+        status: "QUEUED" as const,
+      })),
+    });
+
+    // Enqueue only after the rows are committed, using the comparison's saved parameters
+    const modelsById = new Map(models.map((m) => [m.id, m]));
+    try {
+      await enqueueGenerations(
+        videos.map((video) =>
+          buildGenerationJob(video.id, comparison, modelsById.get(video.modelId)!)
         )
       );
-
-      // Add jobs to queue for each video
-      const isImageToVideo = comparison.type === "image-to-video";
-      for (let i = 0; i < createdVideos.length; i++) {
-        const video = createdVideos[i];
-        const model = models[i];
-
-        // Select correct endpoint based on generation type
-        const endpoint = isImageToVideo ? model.endpoint : model.endpointT2V;
-        if (!endpoint) {
-          console.warn(`[API] Model ${model.name} has no ${isImageToVideo ? 'I2V' : 'T2V'} endpoint, skipping`);
-          continue;
-        }
-
-        await getGenerationQueue().add("generate", {
-          videoId: video.id,
-          comparisonId: comparison.id,
-          modelId: model.id,
-          prompt: comparison.prompt,
-          sourceImageUrl: comparison.sourceImage?.url,
-          modelEndpoint: endpoint,
-          providerName: model.provider.name,
-          // Use saved generation parameters from comparison
-          duration: comparison.duration ?? undefined,
-          aspectRatio: comparison.aspectRatio ?? undefined,
-          seed: comparison.seed ?? undefined,
-        });
-      }
-
-      return createdVideos;
-    });
+    } catch (queueError) {
+      // Leave the videos retryable from the admin UI
+      await prisma.video.updateMany({
+        where: { id: { in: videos.map((v) => v.id) } },
+        data: { status: "FAILED", errorMessage: "Failed to add job to queue" },
+      });
+      throw queueError;
+    }
 
     return NextResponse.json({
       success: true,

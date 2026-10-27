@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { getRecentJobs, type JobStatus } from "@/src/lib/queue/monitor";
+
+const STATUSES: JobStatus[] = ["pending", "active", "completed", "failed"];
 
 export async function GET(req: NextRequest) {
   const { error: denied } = await requireAdmin();
@@ -8,16 +10,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "100");
+    const statusParam = searchParams.get("status") as JobStatus | null;
+    const status = statusParam && STATUSES.includes(statusParam) ? statusParam : undefined;
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "100") || 100, 1), 500);
 
-    const where = status ? { status } : {};
-
-    const jobs = await prisma.job.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    const jobs = await getRecentJobs(limit, status);
 
     return NextResponse.json({ jobs });
   } catch (error) {
