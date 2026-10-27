@@ -16,7 +16,7 @@ import { downloadFile } from "@/src/lib/storage/r2";
 //
 // The manifest names the comparison (created hidden if the slug is new) and
 // one clip per model: a URL or a local file, plus optional credits, attempt
-// count and a note. Models that already have a completed video in the
+// count and a note. With no clips yet it only creates the page. Models that already have a completed video in the
 // comparison are skipped, so a rerun only adds what is missing. Needs the R2
 // variables from .env, ffmpeg and ffprobe.
 
@@ -45,7 +45,7 @@ const manifestSchema = z.object({
         jobId: z.string().optional(),
       })
     )
-    .min(1),
+    .default([]),
 });
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
