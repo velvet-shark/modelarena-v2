@@ -150,6 +150,20 @@ The system will queue jobs, process them in parallel, upload videos to R2, and g
 - **Retry failed videos**: Click retry button on failed cards
 - **Bulk operations**: Select multiple and publish/feature/delete
 - **Manual upload**: `/admin/upload` for models without API
+- **Bulk import**: `scripts/import-videos.ts` loads a whole comparison of clips made elsewhere (URLs or local files) in one run, see below
+
+### Importing clips made outside ModelArena
+
+For models run by hand in another app (Higgsfield models, for example), describe the comparison and its clips in a JSON manifest and run:
+
+```bash
+DATABASE_URL=... pnpm tsx scripts/import-videos.ts manifest.json --dry-run   # check models and sources
+DATABASE_URL=... pnpm tsx scripts/import-videos.ts manifest.json
+```
+
+The manifest has a `comparison` (slug, title, description, type, prompt, aspectRatio, duration, tags) and `videos`: one entry per model with `model` (slug), `source` (URL or local path), and optional `credits`, `attempts`, `generationTime`, `note`, `jobId`. A new slug creates a hidden comparison; publish it in `/admin/comparisons`. Models that already have a completed video are skipped, so a rerun only adds what is missing. Clips are converted to H.264 with faststart when needed. Cards show credits and the attempt number instead of a dollar cost.
+
+Add the Higgsfield provider and models to an existing database with `pnpm tsx prisma/add-higgsfield.ts` (unlike `db:seed`, it deletes nothing).
 
 ### Monitoring
 
@@ -172,6 +186,7 @@ The system will queue jobs, process them in parallel, upload videos to R2, and g
 | PixVerse | V5.5 |
 | Pika Art | Pika 2.2, Pika 2.5 (manual) |
 | Luma Labs | Ray 3 (manual) |
+| Higgsfield (web app, imported) | Kling 4.0, Seedance 2.5, Seedance 2.0, MiniMax H3, Wan 3.0, Grok Imagine 1.5, FLUX.3 Video, Gemini Omni Flash 1.1 |
 
 ## API Reference
 

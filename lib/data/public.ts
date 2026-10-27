@@ -312,6 +312,7 @@ async function loadPublicComparison(slug: string) {
           cost: true,
           voteCount: true,
           createdAt: true,
+          manualMetadata: true,
           model: {
             select: {
               slug: true,
@@ -328,7 +329,21 @@ async function loadPublicComparison(slug: string) {
 
   return {
     ...comparison,
-    videos: comparison.videos.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() })),
+    videos: comparison.videos.map(({ manualMetadata, ...v }) => ({
+      ...v,
+      ...manualVideoStats(manualMetadata),
+      createdAt: v.createdAt.toISOString(),
+    })),
+  };
+}
+
+// Credits and attempt count for clips made by hand on credit-based platforms
+// (scripts/import-videos.ts). The rest of manualMetadata stays server-side.
+function manualVideoStats(metadata: Prisma.JsonValue) {
+  const m = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {};
+  return {
+    credits: typeof m.credits === "number" ? m.credits : null,
+    attempts: typeof m.attempts === "number" ? m.attempts : null,
   };
 }
 

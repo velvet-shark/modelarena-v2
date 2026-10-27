@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import type { PricingConfig } from "../src/lib/pricing/types";
+import { HIGGSFIELD_MODELS, HIGGSFIELD_PROVIDER } from "./higgsfield-models";
 
 const prisma = new PrismaClient();
 
@@ -48,6 +49,12 @@ async function main() {
       displayName: "Manual Upload",
       apiKeyEnv: null,
     },
+  });
+
+  const higgsfieldProvider = await prisma.provider.upsert({
+    where: { name: HIGGSFIELD_PROVIDER.name },
+    update: {},
+    create: HIGGSFIELD_PROVIDER,
   });
 
   // Define all models with EXACT parameters from specs
@@ -683,6 +690,16 @@ async function main() {
         } as PricingConfig,
       },
     },
+
+    // ==================== HIGGSFIELD (web app, no API) ====================
+    ...HIGGSFIELD_MODELS.map((model) => ({
+      ...model,
+      provider: higgsfieldProvider,
+      endpoint: null,
+      endpointT2V: null,
+      capabilities: [imageToVideo, textToVideo],
+      defaultParams: undefined,
+    })),
   ];
 
   // Get all existing model slugs from database
