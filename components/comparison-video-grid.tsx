@@ -16,8 +16,12 @@ import {
   CalendarClock,
   Share2,
   Check,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  ListVideo,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { VoteButton } from "@/components/vote-button";
 import { formatCost } from "@/src/lib/format-cost";
 import {
@@ -36,6 +40,9 @@ interface Video {
   width: number | null;
   height: number | null;
   cost: number | null;
+  // Set for clips made by hand on credit-based platforms (e.g. Higgsfield)
+  credits: number | null;
+  attempts: number | null;
   voteCount: number;
   createdAt: string;
   model: {
@@ -60,6 +67,10 @@ interface ComparisonVideoGridProps {
   videos: Video[];
 }
 
+// How long Play All waits for slower clips after the first one ends before
+// restarting the round anyway (a clip that failed to load never ends)
+const ROUND_GRACE_MS = 3000;
+
 // Helper to determine if video is vertical based on dimensions
 function isVerticalVideo(video: Video): boolean {
   if (video.width && video.height) {
@@ -75,142 +86,69 @@ function hasMixedOrientations(videos: Video[]): boolean {
   return hasVertical && hasHorizontal;
 }
 
-function VideoCard({
-  video,
-  onFullscreen,
-  videoRef,
-  globalIsPlaying,
-}: {
+// Dollars when known, otherwise platform credits; used for the price sorts
+function priceOf(video: Video): number | null {
+  return video.cost ?? video.credits;
+}
+
+function ordinal(n: number): string {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function VideoStats({ video, showSize = false }: { video: Video; showSize?: boolean }) {
+  return (
+    <>
+      {video.generationTime !== null && (
+        <span title="Generation time">{video.generationTime.toFixed(1)}s</span>
+      )}
+      {video.cost !== null && video.cost > 0 ? (
+        <span title="Generation cost">{formatCost(video.cost)}</span>
+      ) : (
+        video.credits !== null && (
+          <span title="Platform credits spent on this clip">
+            {video.credits.toLocaleString("en-US", { maximumFractionDigits: 2 })} credits
+          </span>
+        )
+      )}
+      {video.attempts !== null && video.attempts > 1 && (
+        <span title="Earlier attempts were kept but not shown">{ordinal(video.attempts)} attempt</span>
+      )}
+      {showSize && video.width && video.height && (
+        <span>
+          {video.width}×{video.height}
+        </span>
+      )}
+      {video.createdAt && <span title="Generated on">{formatDate(video.createdAt)}</span>}
+    </>
+  );
+}
+
+interface VideoCardProps {
   video: Video;
   onFullscreen: () => void;
   videoRef: (el: HTMLVideoElement | null) => void;
   globalIsPlaying: boolean;
-}) {
-  const { videoRef: localVideoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
-    useHoverPlay(globalIsPlaying);
+  hasSound: boolean;
+  onToggleSound: () => void;
+  onEnded: () => void;
+}
 
-  const isVertical = isVerticalVideo(video);
-  const aspectRatio =
-    video.width && video.height
-      ? video.width / video.height
-      : isVertical
-      ? 9 / 16
-      : 16 / 9;
-
+// Masonry layout item for mixed orientations
+function VideoCard(props: VideoCardProps) {
   return (
     <div className="masonry-item">
       <div className="group rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow">
-        {/* Video container */}
-        <div
-          className="relative cursor-pointer bg-black"
-          style={{ aspectRatio }}
-          {...hoverProps}
-          {...buttonProps(onFullscreen, `Open ${video.model.name} video`)}
-        >
-          {/* Thumbnail */}
-          {video.thumbnailUrl && (
-            <img
-              src={video.thumbnailUrl}
-              loading="lazy"
-              decoding="async"
-              alt={video.model.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                isPlaying ? "opacity-0" : "opacity-100"
-              }`}
-            />
-          )}
-
-          {/* Video */}
-          {video.url && (
-            <video
-              ref={(el) => {
-                localVideoRef.current = el;
-                videoRef(el);
-              }}
-              src={video.url}
-              muted
-              loop
-              playsInline
-              onPlaying={onPlaying}
-              preload="metadata"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                isPlaying ? "opacity-100" : "opacity-0"
-              }`}
-            />
-          )}
-
-          {/* Play overlay */}
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-              isHovering || globalIsPlaying ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg backdrop-blur-sm">
-              <Play
-                className="w-6 h-6 text-black ml-0.5"
-                fill="currentColor"
-              />
-            </div>
-          </div>
-
-          {/* Click to expand hint */}
-          <div
-            className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity ${
-              isHovering ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <span className="text-white text-sm font-medium px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm">
-              Click to expand
-            </span>
-          </div>
-
-          {/* Vote Button Overlay */}
-          <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
-            <VoteButton
-              videoId={video.id}
-              initialVoteCount={video.voteCount}
-              showZero={false}
-              variant="overlay"
-            />
-          </div>
-        </div>
-
-        {/* Video Info */}
-        <div className="p-4 space-y-3">
-          {/* Model Name & Provider */}
-          <div>
-            <Link
-              href={`/models/${video.model.slug}`}
-              className="font-semibold hover:text-primary transition-colors block"
-            >
-              {video.model.name}
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              via {video.model.provider.displayName}
-            </p>
-          </div>
-
-          {/* Metrics */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            {video.generationTime !== null && (
-              <span title="Generation time">
-                {video.generationTime.toFixed(1)}s
-              </span>
-            )}
-            {video.cost !== null && video.cost > 0 && (
-              <span title="Generation cost">{formatCost(video.cost)}</span>
-            )}
-            {video.createdAt && (
-              <span title="Generated on">
-                {new Date(video.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            )}
-          </div>
-        </div>
+        <VideoCardContent {...props} />
       </div>
     </div>
   );
@@ -219,9 +157,15 @@ function VideoCard({
 export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   const [sortBy, setSortBy] = useState<SortOption>("votes");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [soundId, setSoundId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [copied, setCopied] = useState(false);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  // Play All runs in rounds: clips don't loop on their own, and the round
+  // restarts once every clip has ended, so they stay in step
+  const endedRef = useRef<Set<string>>(new Set());
+  const roundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check for video hash on mount and open modal if found
   useEffect(() => {
@@ -235,6 +179,10 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
     }
   }, [videos]);
 
+  useEffect(() => () => {
+    if (roundTimerRef.current) clearTimeout(roundTimerRef.current);
+  }, []);
+
   const sortedVideos = useMemo(() => {
     const sorted = [...videos];
     switch (sortBy) {
@@ -247,10 +195,10 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
         );
       case "cheapest":
         return sorted.sort(
-          (a, b) => (a.cost ?? Infinity) - (b.cost ?? Infinity)
+          (a, b) => (priceOf(a) ?? Infinity) - (priceOf(b) ?? Infinity)
         );
       case "expensive":
-        return sorted.sort((a, b) => (b.cost ?? 0) - (a.cost ?? 0));
+        return sorted.sort((a, b) => (priceOf(b) ?? 0) - (priceOf(a) ?? 0));
       case "fastest":
         return sorted.sort(
           (a, b) =>
@@ -271,36 +219,68 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   const useMasonry = hasMixedOrientations(videos);
   const allVertical = videos.every(isVerticalVideo);
 
+  const startRound = () => {
+    if (roundTimerRef.current) clearTimeout(roundTimerRef.current);
+    roundTimerRef.current = null;
+    endedRef.current.clear();
+    return Promise.all(
+      Array.from(videoRefs.current.values()).map(async (video) => {
+        video.currentTime = 0;
+        try {
+          await video.play();
+        } catch {
+          // Ignore autoplay failures (user hasn't interacted yet, etc.)
+        }
+      })
+    );
+  };
+
+  const handleEnded = (id: string) => {
+    if (!isPlaying) return;
+    endedRef.current.add(id);
+    if (endedRef.current.size >= videoRefs.current.size) {
+      startRound();
+    } else if (!roundTimerRef.current) {
+      roundTimerRef.current = setTimeout(startRound, ROUND_GRACE_MS);
+    }
+  };
+
+  const pauseAll = () => {
+    if (roundTimerRef.current) clearTimeout(roundTimerRef.current);
+    roundTimerRef.current = null;
+    videoRefs.current.forEach((video) => video.pause());
+    setIsPlaying(false);
+  };
+
   const togglePlayAll = async () => {
     if (isPlaying) {
-      videoRefs.current.forEach((video) => {
-        video.pause();
-      });
-      setIsPlaying(false);
+      pauseAll();
     } else {
       // Flip the button right away; waiting for every play() (the slowest
       // video) left it saying "Play All" and a second click restarted everything
       setIsPlaying(true);
-      await Promise.all(
-        Array.from(videoRefs.current.values()).map(async (video) => {
-          video.currentTime = 0;
-          try {
-            await video.play();
-          } catch {
-            // Ignore autoplay failures (user hasn't interacted yet, etc.)
-          }
-        })
-      );
+      await startRound();
     }
   };
 
-  const openFullscreen = (video: Video) => {
-    videoRefs.current.forEach((v) => v.pause());
-    setIsPlaying(false);
+  const showInModal = (video: Video) => {
     setSelectedVideo(video);
     setCopied(false);
     // Update URL hash for shareable link
     window.history.replaceState(null, "", `#video-${video.id}`);
+  };
+
+  const openFullscreen = (video: Video, playInOrder = false) => {
+    pauseAll();
+    setAutoAdvance(playInOrder);
+    showInModal(video);
+  };
+
+  const step = (direction: 1 | -1) => {
+    if (!selectedVideo) return;
+    const index = sortedVideos.findIndex((v) => v.id === selectedVideo.id);
+    const next = sortedVideos[index + direction];
+    if (next) showInModal(next);
   };
 
   const closeModal = () => {
@@ -329,6 +309,9 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
     }
   };
 
+  const hasPrice = videos.some((v) => (priceOf(v) ?? 0) > 0);
+  const hasTime = videos.some((v) => v.generationTime !== null);
+
   const sortOptions: {
     value: SortOption;
     label: string;
@@ -344,28 +327,52 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
       label: "Latest",
       icon: <CalendarClock className="h-3.5 w-3.5" />,
     },
-    {
-      value: "cheapest",
-      label: "Cheapest",
-      icon: <TrendingDown className="h-3.5 w-3.5" />,
-    },
-    {
-      value: "expensive",
-      label: "Most Expensive",
-      icon: <TrendingUp className="h-3.5 w-3.5" />,
-    },
-    {
-      value: "fastest",
-      label: "Fastest",
-      icon: <Zap className="h-3.5 w-3.5" />,
-    },
-    {
-      value: "slowest",
-      label: "Slowest",
-      icon: <Clock className="h-3.5 w-3.5" />,
-    },
+    ...(hasPrice
+      ? [
+          {
+            value: "cheapest" as const,
+            label: "Cheapest",
+            icon: <TrendingDown className="h-3.5 w-3.5" />,
+          },
+          {
+            value: "expensive" as const,
+            label: "Most Expensive",
+            icon: <TrendingUp className="h-3.5 w-3.5" />,
+          },
+        ]
+      : []),
+    ...(hasTime
+      ? [
+          {
+            value: "fastest" as const,
+            label: "Fastest",
+            icon: <Zap className="h-3.5 w-3.5" />,
+          },
+          {
+            value: "slowest" as const,
+            label: "Slowest",
+            icon: <Clock className="h-3.5 w-3.5" />,
+          },
+        ]
+      : []),
     { value: "az", label: "A → Z" },
   ];
+
+  const cardProps = (video: Video) => ({
+    video,
+    onFullscreen: () => openFullscreen(video),
+    videoRef: (el: HTMLVideoElement | null) => {
+      if (el) videoRefs.current.set(video.id, el);
+    },
+    globalIsPlaying: isPlaying,
+    hasSound: isPlaying && soundId === video.id,
+    onToggleSound: () => setSoundId((id) => (id === video.id ? null : video.id)),
+    onEnded: () => handleEnded(video.id),
+  });
+
+  const selectedIndex = selectedVideo
+    ? sortedVideos.findIndex((v) => v.id === selectedVideo.id)
+    : -1;
 
   return (
     <div className="space-y-6">
@@ -385,33 +392,42 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
               </h3>
               <p className="text-sm sm:text-base text-white/80 mt-1">
                 {isPlaying
-                  ? "Watch all models side by side"
-                  : `Play all ${videos.length} videos at once`}
+                  ? "All muted, in sync. Tap the speaker on a clip to hear it."
+                  : `Play all ${videos.length} videos at once, or one by one with sound`}
               </p>
             </div>
-            <button
-              onClick={togglePlayAll}
-              className={`group relative flex items-center gap-3 rounded-full font-bold text-lg transition-all duration-300 ${
-                isPlaying
-                  ? "bg-white/20 hover:bg-white/30 text-white px-8 py-4"
-                  : "bg-white hover:bg-white/95 text-[#296094] px-8 py-4 hover:scale-105 shadow-xl hover:shadow-2xl"
-              }`}
-            >
-              <span
-                className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={togglePlayAll}
+                className={`group relative flex items-center gap-3 rounded-full font-bold text-lg transition-all duration-300 ${
                   isPlaying
-                    ? "bg-white/20"
-                    : "bg-[#28A2DD] group-hover:bg-[#296094]"
+                    ? "bg-white/20 hover:bg-white/30 text-white px-8 py-4"
+                    : "bg-white hover:bg-white/95 text-[#296094] px-8 py-4 hover:scale-105 shadow-xl hover:shadow-2xl"
                 }`}
               >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5 text-white fill-current" />
-                ) : (
-                  <Play className="h-5 w-5 text-white fill-current ml-0.5" />
-                )}
-              </span>
-              {isPlaying ? "Pause All" : "Play All"}
-            </button>
+                <span
+                  className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+                    isPlaying
+                      ? "bg-white/20"
+                      : "bg-[#28A2DD] group-hover:bg-[#296094]"
+                  }`}
+                >
+                  {isPlaying ? (
+                    <Pause className="h-5 w-5 text-white fill-current" />
+                  ) : (
+                    <Play className="h-5 w-5 text-white fill-current ml-0.5" />
+                  )}
+                </span>
+                {isPlaying ? "Pause All" : "Play All"}
+              </button>
+              <button
+                onClick={() => sortedVideos[0] && openFullscreen(sortedVideos[0], true)}
+                className="flex items-center gap-2 rounded-full border border-white/60 px-5 py-3 font-semibold text-white hover:bg-white/15 transition-colors"
+              >
+                <ListVideo className="h-5 w-5" />
+                One by one
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -444,15 +460,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
           // Masonry layout for mixed orientations
           <div className="masonry masonry-md-3 masonry-lg-4">
             {sortedVideos.map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                onFullscreen={() => openFullscreen(video)}
-                videoRef={(el) => {
-                  if (el) videoRefs.current.set(video.id, el);
-                }}
-                globalIsPlaying={isPlaying}
-              />
+              <VideoCard key={video.id} {...cardProps(video)} />
             ))}
           </div>
         ) : (
@@ -466,14 +474,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
           >
             {sortedVideos.map((video) => (
               <div key={video.id} className="rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow">
-                <VideoCardContent
-                  video={video}
-                  onFullscreen={() => openFullscreen(video)}
-                  videoRef={(el) => {
-                    if (el) videoRefs.current.set(video.id, el);
-                  }}
-                  globalIsPlaying={isPlaying}
-                />
+                <VideoCardContent {...cardProps(video)} />
               </div>
             ))}
           </div>
@@ -496,6 +497,12 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
           <DialogPrimitive.Content
             className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-8"
             onClick={closeModal}
+            onKeyDown={(e) => {
+              // The focused video's own controls use the arrow keys to seek
+              if (e.target instanceof HTMLVideoElement) return;
+              if (e.key === "ArrowRight") step(1);
+              if (e.key === "ArrowLeft") step(-1);
+            }}
             aria-describedby={undefined}
           >
             {selectedVideo && (
@@ -536,7 +543,8 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                   </button>
                 </div>
 
-                {/* Video container */}
+                {/* Video container. One element for every clip, so a browser
+                    that allowed sound for the first clip allows it for the next */}
                 <div
                   className={`relative ${
                     isVerticalVideo(selectedVideo)
@@ -550,6 +558,7 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                     controls
                     autoPlay
                     playsInline
+                    onEnded={autoAdvance ? () => step(1) : undefined}
                     className={`${
                       isVerticalVideo(selectedVideo)
                         ? "h-full w-auto"
@@ -560,37 +569,47 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
 
                 {/* Video info */}
                 <div className="mt-4 sm:mt-6 text-center text-white px-4">
-                  <h3 className="font-display text-lg sm:text-2xl font-bold">
-                    {selectedVideo.model.name}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-white/70 mt-1">
-                    via {selectedVideo.model.provider.displayName}
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-2 sm:mt-3 text-xs sm:text-sm text-white/60">
-                    {selectedVideo.generationTime !== null && (
-                      <span>{selectedVideo.generationTime.toFixed(1)}s</span>
-                    )}
-                    {selectedVideo.cost !== null && selectedVideo.cost > 0 && (
-                      <span>{formatCost(selectedVideo.cost)}</span>
-                    )}
-                    {selectedVideo.width && selectedVideo.height && (
-                      <span>
-                        {selectedVideo.width}×{selectedVideo.height}
-                      </span>
-                    )}
-                    {selectedVideo.createdAt && (
-                      <span>
-                        {new Date(selectedVideo.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )}
-                      </span>
-                    )}
+                  <div className="flex items-center justify-center gap-3 sm:gap-5">
+                    <button
+                      onClick={() => step(-1)}
+                      disabled={selectedIndex <= 0}
+                      aria-label="Previous video"
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 transition-colors"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <div>
+                      <h3 className="font-display text-lg sm:text-2xl font-bold">
+                        {selectedVideo.model.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-white/70 mt-1">
+                        via {selectedVideo.model.provider.displayName}
+                        {selectedIndex >= 0 && ` · ${selectedIndex + 1} of ${sortedVideos.length}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => step(1)}
+                      disabled={selectedIndex >= sortedVideos.length - 1}
+                      aria-label="Next video"
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 transition-colors"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
                   </div>
+                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-2 sm:mt-3 text-xs sm:text-sm text-white/60">
+                    <VideoStats video={selectedVideo} showSize />
+                  </div>
+                  {sortedVideos.length > 1 && (
+                    <button
+                      onClick={() => setAutoAdvance((on) => !on)}
+                      aria-pressed={autoAdvance}
+                      className={`mt-3 sm:mt-4 px-3 py-1.5 rounded-full text-xs sm:text-sm transition-colors ${
+                        autoAdvance ? "bg-white text-black" : "bg-white/10 text-white/80 hover:bg-white/20"
+                      }`}
+                    >
+                      Auto-play next: {autoAdvance ? "on" : "off"}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -601,18 +620,16 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   );
 }
 
-// VideoCardContent for regular grid layout
+// Card body: video with hover preview, then model name and stats
 function VideoCardContent({
   video,
   onFullscreen,
   videoRef,
   globalIsPlaying,
-}: {
-  video: Video;
-  onFullscreen: () => void;
-  videoRef: (el: HTMLVideoElement | null) => void;
-  globalIsPlaying: boolean;
-}) {
+  hasSound,
+  onToggleSound,
+  onEnded,
+}: VideoCardProps) {
   const { videoRef: localVideoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
     useHoverPlay(globalIsPlaying);
 
@@ -646,7 +663,8 @@ function VideoCardContent({
           />
         )}
 
-        {/* Video */}
+        {/* Video. Play All restarts the clips together, so they only loop
+            on their own for the hover preview */}
         {video.url && (
           <video
             ref={(el) => {
@@ -654,10 +672,11 @@ function VideoCardContent({
               videoRef(el);
             }}
             src={video.url}
-            muted
-            loop
+            muted={!hasSound}
+            loop={!globalIsPlaying}
             playsInline
             onPlaying={onPlaying}
+            onEnded={onEnded}
             preload="metadata"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-100" : "opacity-0"
@@ -687,6 +706,25 @@ function VideoCardContent({
           </span>
         </div>
 
+        {/* Sound toggle while everything plays: one clip is heard at a time */}
+        {globalIsPlaying && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSound();
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+            aria-label={hasSound ? `Mute ${video.model.name}` : `Hear ${video.model.name}`}
+            aria-pressed={hasSound}
+            className={`absolute top-3 left-3 z-10 p-2 rounded-full backdrop-blur-sm transition-colors ${
+              hasSound ? "bg-white text-black" : "bg-black/50 text-white hover:bg-black/70"
+            }`}
+          >
+            {hasSound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </button>
+        )}
+
         {/* Vote Button Overlay */}
         <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
           <VoteButton
@@ -715,23 +753,7 @@ function VideoCardContent({
 
         {/* Metrics */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          {video.generationTime !== null && (
-            <span title="Generation time">
-              {video.generationTime.toFixed(1)}s
-            </span>
-          )}
-          {video.cost !== null && video.cost > 0 && (
-            <span title="Generation cost">{formatCost(video.cost)}</span>
-          )}
-          {video.createdAt && (
-            <span title="Generated on">
-              {new Date(video.createdAt).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          )}
+          <VideoStats video={video} />
         </div>
       </div>
     </>

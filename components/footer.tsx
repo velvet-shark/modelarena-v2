@@ -9,7 +9,7 @@ export function Footer() {
             <img src="/ModelArena-logo.svg" alt="ModelArena" className="h-6" />
           </Link>
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            <span>© 2025 ModelArena</span>
+            <span>© {new Date().getFullYear()} ModelArena</span>
             <span className="hidden sm:inline">•</span>
             <span className="flex items-center">
               <svg

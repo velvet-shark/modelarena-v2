@@ -7,13 +7,19 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { formatCost } from "@/src/lib/format-cost";
 
+const formatCredits = (credits: number) =>
+  credits.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
 interface ComparisonSidebarProps {
   type: string;
   modelCount: number;
   prompt: string;
   totalCost: number;
   avgCost: number;
-  avgGenTime: number;
+  avgGenTime: number | null;
+  // Present when the clips were paid in platform credits instead of dollars
+  totalCredits?: number | null;
+  avgCredits?: number | null;
   sourceImage?: {
     url: string;
     width?: number | null;
@@ -28,6 +34,8 @@ export function ComparisonSidebar({
   totalCost,
   avgCost,
   avgGenTime,
+  totalCredits,
+  avgCredits,
   sourceImage
 }: ComparisonSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -58,6 +66,8 @@ export function ComparisonSidebar({
               totalCost={totalCost}
               avgCost={avgCost}
               avgGenTime={avgGenTime}
+              totalCredits={totalCredits}
+              avgCredits={avgCredits}
               sourceImage={sourceImage}
               onImageClick={() => setIsImageModalOpen(true)}
             />
@@ -75,6 +85,8 @@ export function ComparisonSidebar({
             totalCost={totalCost}
             avgCost={avgCost}
             avgGenTime={avgGenTime}
+            totalCredits={totalCredits}
+            avgCredits={avgCredits}
             sourceImage={sourceImage}
             onImageClick={() => setIsImageModalOpen(true)}
           />
@@ -121,6 +133,8 @@ function SidebarContent({
   totalCost,
   avgCost,
   avgGenTime,
+  totalCredits,
+  avgCredits,
   sourceImage,
   onImageClick
 }: {
@@ -129,7 +143,9 @@ function SidebarContent({
   prompt: string;
   totalCost: number;
   avgCost: number;
-  avgGenTime: number;
+  avgGenTime: number | null;
+  totalCredits?: number | null;
+  avgCredits?: number | null;
   sourceImage?: {
     url: string;
     width?: number | null;
@@ -166,16 +182,33 @@ function SidebarContent({
         </div>
         <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
           <div className="text-xs text-muted-foreground">Avg Time</div>
-          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{avgGenTime.toFixed(0)}s</div>
+          <div className="font-display text-xl sm:text-2xl font-bold mt-1">
+            {avgGenTime === null ? "N/A" : `${avgGenTime.toFixed(0)}s`}
+          </div>
         </div>
-        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
-          <div className="text-xs text-muted-foreground">Total Cost</div>
-          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(totalCost)}</div>
-        </div>
-        <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
-          <div className="text-xs text-muted-foreground">Avg Cost</div>
-          <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(avgCost)}</div>
-        </div>
+        {totalCredits != null ? (
+          <>
+            <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground">Total Credits</div>
+              <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCredits(totalCredits)}</div>
+            </div>
+            <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground">Avg Credits</div>
+              <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCredits(avgCredits ?? 0)}</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground">Total Cost</div>
+              <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(totalCost)}</div>
+            </div>
+            <div className="rounded-xl bg-muted/50 p-3 sm:p-4">
+              <div className="text-xs text-muted-foreground">Avg Cost</div>
+              <div className="font-display text-xl sm:text-2xl font-bold mt-1">{formatCost(avgCost)}</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Type Badge */}

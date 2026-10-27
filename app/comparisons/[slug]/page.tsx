@@ -164,7 +164,15 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
                     (sum, v) => sum + (v.generationTime ?? 0),
                     0
                   ) / videosWithTime.length
-                : 0;
+                : null;
+            })()}
+            {...(() => {
+              const credits = comparison.videos
+                .map((v) => v.credits)
+                .filter((c): c is number => c !== null);
+              if (credits.length === 0) return {};
+              const totalCredits = credits.reduce((sum, c) => sum + c, 0);
+              return { totalCredits, avgCredits: totalCredits / credits.length };
             })()}
             sourceImage={comparison.sourceImage}
           />
