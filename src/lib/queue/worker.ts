@@ -1,232 +1,268 @@
-import { Worker, Job } from "bullmq";
+import { Worker, Job, UnrecoverableError } from "bullmq";
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { getProvider } from "../providers/registry";
-import { downloadAndUploadVideo } from "../storage/r2";
-import { generateThumbnail } from "../thumbnails/generate";
-import { getConnection, type GenerationJobData } from "./index";
+import type { GenerationRequest, VideoProvider } from "../providers/types";
+import { ingestVideo } from "../storage/ingest";
+import { deleteFiles } from "../storage/r2";
+import { getConnection, type GenerationJobData, type GeneratedOutput } from "./index";
 import { CostCalculator, type PricingConfig } from "../pricing";
 
-export function createWorker(concurrency = 5) {
-  const worker = new Worker<GenerationJobData>(
-    "video-generation",
-    async (job: Job<GenerationJobData>) => {
-      const {
-        videoId,
-        modelId,
-        modelEndpoint,
-        providerName,
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function toJson(value: unknown) {
+  return value === undefined ? undefined : (value as Prisma.InputJsonValue);
+}
+
+// Run the provider, or resume the request an earlier attempt submitted.
+// Progress is saved in the job data, so a retry after a download or upload
+// failure reuses the paid result instead of generating again.
+async function generate(
+  job: Job<GenerationJobData>,
+  provider: VideoProvider,
+  request: GenerationRequest
+): Promise<GeneratedOutput> {
+  const { videoId, modelEndpoint } = job.data;
+
+  const result = await provider.generateVideo(modelEndpoint, request, {
+    requestId: job.data.providerRequestId,
+    onSubmitted: async (requestId) => {
+      await job.updateData({ ...job.data, providerRequestId: requestId });
+      await prisma.video.updateMany({ where: { id: videoId }, data: { apiRequestId: requestId } });
+    },
+  });
+
+  if (!result.success || !result.videoUrl) {
+    const message = result.error || "Video generation failed";
+    console.error(`[Worker] Video generation failed:`, message);
+    await prisma.video.updateMany({
+      where: { id: videoId },
+      data: { generationTime: result.generationTime, apiResponse: toJson(result.rawResponse) },
+    });
+
+    // Rejected input fails the same way every time; don't burn attempts on it
+    if (!result.retryable) throw new UnrecoverableError(message);
+    // The next attempt submits a fresh request
+    await job.updateData({ ...job.data, providerRequestId: undefined });
+    throw new Error(message);
+  }
+
+  const generated: GeneratedOutput = {
+    videoUrl: result.videoUrl,
+    duration: result.duration,
+    width: result.width,
+    height: result.height,
+    generationTime: result.generationTime,
+    apiRequestId: result.apiRequestId,
+  };
+  await job.updateData({ ...job.data, generated });
+  // Record the paid result right away, so it isn't lost if storing it fails
+  await prisma.video.updateMany({
+    where: { id: videoId },
+    data: {
+      generationTime: generated.generationTime,
+      apiRequestId: generated.apiRequestId,
+      apiResponse: toJson(result.rawResponse),
+    },
+  });
+  return generated;
+}
+
+export async function processGenerationJob(job: Job<GenerationJobData>) {
+  const {
+    videoId,
+    modelId,
+    providerName,
+    prompt,
+    sourceImageUrl,
+    duration,
+    aspectRatio,
+    seed,
+    additionalParams,
+  } = job.data;
+
+  console.log(`[Worker] Processing video generation for ${videoId}`);
+
+  try {
+    // Skip videos that were deleted, cancelled or already completed
+    // (e.g. a manual upload landed while this job waited)
+    const { count: claimed } = await prisma.video.updateMany({
+      where: { id: videoId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+      data: { status: "PROCESSING" },
+    });
+
+    if (claimed === 0) {
+      console.log(`[Worker] Video ${videoId} is gone or finished, skipping job`);
+      return { success: false, videoId, skipped: true };
+    }
+
+    // Fetch model to get default params
+    const model = await prisma.model.findUnique({
+      where: { id: modelId },
+      select: {
+        defaultParams: true,
+        costPerSecond: true,
+      },
+    });
+
+    // Extract model-specific default params (i2v or t2v based on source)
+    const modelParams = model?.defaultParams as Record<string, unknown> | null;
+    const isImageToVideo = !!sourceImageUrl;
+    const modeParams = isImageToVideo
+      ? (modelParams?.i2v as Record<string, unknown> | undefined)
+      : (modelParams?.t2v as Record<string, unknown> | undefined);
+
+    // Extract top-level field mappings (imageUrlField, imageUrlIsArray, pricing, etc.)
+    const fieldMappings: Record<string, unknown> = {};
+    if (modelParams?.imageUrlField) fieldMappings.imageUrlField = modelParams.imageUrlField;
+    if (modelParams?.imageUrlIsArray) fieldMappings.imageUrlIsArray = modelParams.imageUrlIsArray;
+    if (modelParams?.pricing) fieldMappings.pricing = modelParams.pricing;
+
+    // Build final params: model defaults < job params (job params win)
+    // Include field mappings for provider to handle
+    const finalAdditionalParams = {
+      ...fieldMappings, // Field mapping config
+      ...modeParams, // Model's default params (like elements for Kling O1)
+      ...additionalParams, // Any explicit additional params
+    };
+
+    // Override aspect_ratio with comparison's setting if provided
+    if (aspectRatio) {
+      finalAdditionalParams.aspect_ratio = aspectRatio;
+    }
+
+    console.log(
+      `[Worker] Using params for ${videoId}:`,
+      JSON.stringify({
+        duration,
+        aspectRatio,
+        seed,
+        additionalParams: finalAdditionalParams,
+      })
+    );
+
+    let generated = job.data.generated;
+    if (generated) {
+      console.log(`[Worker] Reusing video generated by an earlier attempt`);
+    } else {
+      let provider: VideoProvider;
+      try {
+        provider = getProvider(providerName);
+      } catch (error) {
+        // Unknown provider or missing API key: retrying won't help
+        throw new UnrecoverableError(errorMessage(error));
+      }
+      console.log(`[Worker] Using provider: ${provider.name}`);
+
+      generated = await generate(job, provider, {
         prompt,
         sourceImageUrl,
         duration,
         aspectRatio,
         seed,
-        additionalParams,
-      } = job.data;
-
-      console.log(`[Worker] Processing video generation for ${videoId}`);
-
-      try {
-        // Check if video still exists (may have been deleted)
-        const existingVideo = await prisma.video.findUnique({
-          where: { id: videoId },
-          select: { id: true },
-        });
-
-        if (!existingVideo) {
-          console.log(`[Worker] Video ${videoId} no longer exists, skipping job`);
-          return { success: false, videoId, skipped: true };
-        }
-
-        // Update video status to processing
-        await prisma.video.update({
-          where: { id: videoId },
-          data: { status: "PROCESSING" },
-        });
-
-        // Fetch model to get default params
-        const model = await prisma.model.findUnique({
-          where: { id: modelId },
-          select: {
-            defaultParams: true,
-            costPerSecond: true,
-          },
-        });
-
-        // Extract model-specific default params (i2v or t2v based on source)
-        const modelParams = model?.defaultParams as Record<string, unknown> | null;
-        const isImageToVideo = !!sourceImageUrl;
-        const modeParams = isImageToVideo
-          ? (modelParams?.i2v as Record<string, unknown> | undefined)
-          : (modelParams?.t2v as Record<string, unknown> | undefined);
-
-        // Extract top-level field mappings (imageUrlField, imageUrlIsArray, pricing, etc.)
-        const fieldMappings: Record<string, unknown> = {};
-        if (modelParams?.imageUrlField) fieldMappings.imageUrlField = modelParams.imageUrlField;
-        if (modelParams?.imageUrlIsArray) fieldMappings.imageUrlIsArray = modelParams.imageUrlIsArray;
-        if (modelParams?.pricing) fieldMappings.pricing = modelParams.pricing;
-
-        // Build final params: model defaults < job params (job params win)
-        // Include field mappings for provider to handle
-        const finalAdditionalParams = {
-          ...fieldMappings, // Field mapping config
-          ...modeParams, // Model's default params (like elements for Kling O1)
-          ...additionalParams, // Any explicit additional params
-        };
-
-        // Override aspect_ratio with comparison's setting if provided
-        if (aspectRatio) {
-          finalAdditionalParams.aspect_ratio = aspectRatio;
-        }
-
-        console.log(
-          `[Worker] Using params for ${videoId}:`,
-          JSON.stringify({
-            duration,
-            aspectRatio,
-            seed,
-            additionalParams: finalAdditionalParams,
-          })
-        );
-
-        // Get provider and generate video
-        const provider = getProvider(providerName);
-        console.log(`[Worker] Using provider: ${provider.name}`);
-
-        const result = await provider.generateVideo(modelEndpoint, {
-          prompt,
-          sourceImageUrl,
-          duration,
-          aspectRatio,
-          seed,
-          additionalParams: finalAdditionalParams,
-        });
-
-        if (result.success && result.videoUrl) {
-          console.log(`[Worker] Video generated successfully, uploading to R2`);
-
-          // Download video and upload to R2 (also extracts metadata via ffprobe)
-          const r2Result = await downloadAndUploadVideo(
-            result.videoUrl,
-            videoId
-          );
-
-          // Use metadata from ffprobe (most reliable), then API response, then request params as fallback
-          const videoDuration =
-            r2Result.metadata?.duration ?? result.duration ?? duration ?? 0;
-          const videoWidth =
-            r2Result.metadata?.width ?? result.width ?? undefined;
-          const videoHeight =
-            r2Result.metadata?.height ?? result.height ?? undefined;
-
-          console.log(
-            `[Worker] Final video metrics: ${videoDuration}s, ${videoWidth}x${videoHeight}`
-          );
-
-          // Generate thumbnail
-          console.log(`[Worker] Generating thumbnail`);
-          const thumbnailResult = await generateThumbnail(
-            r2Result.url,
-            videoId
-          );
-
-          // Extract pricing config from defaultParams (model already fetched above)
-          const pricingConfig = (model?.defaultParams as any)
-            ?.pricing as PricingConfig | undefined;
-
-          // Calculate cost based on actual video metrics
-          const costResult = CostCalculator.calculate(
-            pricingConfig,
-            {
-              duration: videoDuration,
-              width: videoWidth,
-              height: videoHeight,
-              hasAudio: false, // Currently all videos have no audio
-              additionalParams: finalAdditionalParams,
-            },
-            model?.costPerSecond
-          );
-
-          // Log cost breakdown for monitoring
-          if (costResult.breakdown) {
-            console.log(
-              `[Worker] Cost breakdown for ${videoId}:`,
-              costResult.breakdown
-            );
-          }
-          if (costResult.error) {
-            console.warn(
-              `[Worker] Cost calculation warning for ${videoId}:`,
-              costResult.error
-            );
-          }
-
-          // Update video record with all the data
-          await prisma.video.update({
-            where: { id: videoId },
-            data: {
-              status: "COMPLETED",
-              url: r2Result.url,
-              r2Key: r2Result.key,
-              thumbnailUrl: thumbnailResult.url,
-              thumbnailKey: thumbnailResult.key,
-              duration: videoDuration,
-              width: videoWidth,
-              height: videoHeight,
-              fileSize: r2Result.fileSize,
-              generationTime: result.generationTime,
-              cost: costResult.cost,
-              apiRequestId: result.apiRequestId,
-              apiResponse: result.rawResponse as any,
-            },
-          });
-
-          console.log(`[Worker] Video ${videoId} completed successfully`);
-          return { success: true, videoId };
-        } else {
-          // Generation failed
-          console.error(
-            `[Worker] Video generation failed:`,
-            result.error
-          );
-
-          await prisma.video.update({
-            where: { id: videoId },
-            data: {
-              status: "FAILED",
-              errorMessage: result.error,
-              generationTime: result.generationTime,
-              apiResponse: result.rawResponse as any,
-            },
-          });
-
-          throw new Error(result.error || "Video generation failed");
-        }
-      } catch (error) {
-        console.error(`[Worker] Job failed for video ${videoId}:`, error);
-
-        // Update video status to failed (if it still exists)
-        try {
-          await prisma.video.update({
-            where: { id: videoId },
-            data: {
-              status: "FAILED",
-              errorMessage:
-                error instanceof Error ? error.message : String(error),
-            },
-          });
-        } catch (updateError) {
-          // Video may have been deleted, ignore update error
-          console.log(`[Worker] Could not update video ${videoId} (may have been deleted)`);
-        }
-
-        throw error;
-      }
-    },
-    {
-      connection: getConnection(),
-      concurrency,
+        additionalParams: finalAdditionalParams,
+      });
     }
-  );
+
+    console.log(`[Worker] Video generated successfully, uploading to R2`);
+    const media = await ingestVideo(generated.videoUrl, videoId);
+
+    // Use metadata from ffprobe (most reliable), then API response, then request params as fallback
+    const videoDuration = media.metadata?.duration ?? generated.duration ?? duration ?? 0;
+    const videoWidth = media.metadata?.width ?? generated.width ?? undefined;
+    const videoHeight = media.metadata?.height ?? generated.height ?? undefined;
+
+    console.log(
+      `[Worker] Final video metrics: ${videoDuration}s, ${videoWidth}x${videoHeight}`
+    );
+
+    // Extract pricing config from defaultParams (model already fetched above)
+    const pricingConfig = modelParams?.pricing as PricingConfig | undefined;
+
+    // Calculate cost based on actual video metrics
+    const costResult = CostCalculator.calculate(
+      pricingConfig,
+      {
+        duration: videoDuration,
+        width: videoWidth,
+        height: videoHeight,
+        hasAudio: false, // Currently all videos have no audio
+        additionalParams: finalAdditionalParams,
+      },
+      model?.costPerSecond
+    );
+
+    // Log cost breakdown for monitoring
+    if (costResult.breakdown) {
+      console.log(`[Worker] Cost breakdown for ${videoId}:`, costResult.breakdown);
+    }
+    if (costResult.error) {
+      console.warn(`[Worker] Cost calculation warning for ${videoId}:`, costResult.error);
+    }
+
+    // Update video record with all the data
+    const { count } = await prisma.video.updateMany({
+      where: { id: videoId },
+      data: {
+        status: "COMPLETED",
+        errorMessage: null,
+        url: media.url,
+        r2Key: media.key,
+        thumbnailUrl: media.thumbnail?.url ?? null,
+        thumbnailKey: media.thumbnail?.key ?? null,
+        duration: videoDuration,
+        width: videoWidth,
+        height: videoHeight,
+        fileSize: media.fileSize,
+        generationTime: generated.generationTime,
+        cost: costResult.cost,
+        apiRequestId: generated.apiRequestId,
+      },
+    });
+
+    if (count === 0) {
+      // Deleted while we worked: remove what we just uploaded
+      console.log(`[Worker] Video ${videoId} was deleted during processing, cleaning up`);
+      await deleteFiles([media.key, media.thumbnail?.key]);
+      return { success: false, videoId, skipped: true };
+    }
+
+    console.log(`[Worker] Video ${videoId} completed successfully`);
+    return { success: true, videoId };
+  } catch (error) {
+    const message = errorMessage(error);
+    const attempts = job.opts.attempts ?? 1;
+    const attempt = job.attemptsMade + 1;
+    const willRetry = !(error instanceof UnrecoverableError) && attempt < attempts;
+    console.error(`[Worker] Attempt ${attempt}/${attempts} failed for video ${videoId}:`, error);
+
+    // Stay QUEUED while BullMQ retries, so the admin retry button can't
+    // start a second job for the same video
+    await prisma.video
+      .updateMany({
+        where: { id: videoId },
+        data: willRetry
+          ? {
+              status: "QUEUED",
+              errorMessage: `Attempt ${attempt} of ${attempts} failed, retrying: ${message}`,
+            }
+          : { status: "FAILED", errorMessage: message },
+      })
+      .catch((updateError) =>
+        console.error(`[Worker] Could not update video ${videoId}:`, updateError)
+      );
+
+    throw error;
+  }
+}
+
+export function createWorker(concurrency = 5) {
+  const worker = new Worker<GenerationJobData>("video-generation", processGenerationJob, {
+    connection: getConnection(),
+    concurrency,
+  });
 
   // Event handlers
   worker.on("completed", (job) => {

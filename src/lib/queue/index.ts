@@ -33,6 +33,20 @@ export interface GenerationJobData {
   aspectRatio?: string;
   seed?: number;
   additionalParams?: Record<string, unknown>;
+
+  // Written by the worker so BullMQ retries of this job don't pay twice:
+  // the provider request it already submitted, then the finished output
+  providerRequestId?: string;
+  generated?: GeneratedOutput;
+}
+
+export interface GeneratedOutput {
+  videoUrl: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  generationTime: number;
+  apiRequestId?: string;
 }
 
 // Lazy queue initialization

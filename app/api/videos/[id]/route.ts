@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { deleteFile } from "@/lib/storage/r2";
+import { deleteFiles } from "@/src/lib/storage/r2";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -126,34 +126,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // Delete R2 files (best effort)
-    const r2DeletePromises: Promise<void>[] = [];
-
-    // Delete video file
-    if (video.r2Key) {
-      r2DeletePromises.push(
-        deleteFile(video.r2Key).catch((err) =>
-          console.error(`Failed to delete video ${video.r2Key}:`, err)
-        )
-      );
-    }
-
-    // Delete thumbnail
-    if (video.thumbnailKey) {
-      r2DeletePromises.push(
-        deleteFile(video.thumbnailKey).catch((err) =>
-          console.error(`Failed to delete thumbnail ${video.thumbnailKey}:`, err)
-        )
-      );
-    }
-
-    // Wait for R2 deletions
-    await Promise.all(r2DeletePromises);
-
-    // Delete video record
+    // Row first, then files (best effort), so a failed delete never leaves a
+    // video pointing at missing files
     await prisma.video.delete({
       where: { id },
     });
+
+    await deleteFiles([video.r2Key, video.thumbnailKey]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

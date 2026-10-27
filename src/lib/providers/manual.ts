@@ -18,6 +18,7 @@ export class ManualProvider implements VideoProvider {
       success: false,
       generationTime: 0,
       error: "Manual provider does not support automatic generation. Please use the manual upload interface.",
+      retryable: false,
     };
   }
 }

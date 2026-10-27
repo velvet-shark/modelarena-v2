@@ -1,16 +1,29 @@
-import type {
-  VideoProvider,
-  GenerationRequest,
-  GenerationResult,
+import {
+  isRetryableStatus,
+  sleep,
+  MAX_WAIT_MS,
+  POLL_INTERVAL_MS,
+  type VideoProvider,
+  type GenerationRequest,
+  type GenerationResult,
+  type GenerateOptions,
 } from "./types";
 
 interface RunwayTaskResponse {
   id: string;
-  status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
+  status: "PENDING" | "THROTTLED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
   output?: string[];
   failure?: string;
   failure_code?: string;
 }
+
+class RunwayHttpError extends Error {
+  constructor(readonly status: number, body: string) {
+    super(`Runway API error: ${status} - ${body}`);
+  }
+}
+
+class RunwayInputError extends Error {}
 
 export class RunwayProvider implements VideoProvider {
   name = "runway";
@@ -27,44 +40,57 @@ export class RunwayProvider implements VideoProvider {
 
   async generateVideo(
     modelEndpoint: string,
-    request: GenerationRequest
+    request: GenerationRequest,
+    options: GenerateOptions = {}
   ): Promise<GenerationResult> {
     const startTime = Date.now();
+    let taskId = options.requestId;
 
-    try {
+    if (!taskId) {
       // Step 1: Create generation task
-      const taskId = await this.createTask(modelEndpoint, request);
-
-      // Step 2: Poll for completion
-      const result = await this.pollTask(taskId);
-
-      const generationTime = (Date.now() - startTime) / 1000;
-
-      if (result.status === "SUCCEEDED" && result.output && result.output[0]) {
-        return {
-          success: true,
-          videoUrl: result.output[0],
-          generationTime,
-          apiRequestId: taskId,
-          rawResponse: result,
-        };
-      } else {
+      try {
+        taskId = await this.createTask(modelEndpoint, request);
+      } catch (error) {
+        const rejected =
+          error instanceof RunwayInputError ||
+          (error instanceof RunwayHttpError && !isRetryableStatus(error.status));
+        // Network errors and 5xx/429 are thrown so the job retries
+        if (!rejected) throw error;
+        console.error("[runway] Request rejected:", error);
         return {
           success: false,
-          generationTime,
-          error: result.failure || "Generation failed with unknown error",
+          generationTime: (Date.now() - startTime) / 1000,
+          error: error.message,
         };
       }
-    } catch (error) {
-      const generationTime = (Date.now() - startTime) / 1000;
-      console.error("[runway] Generation error:", error);
+      await options.onSubmitted?.(taskId);
+    }
 
+    // Step 2: Poll for completion
+    const { task: result, runningAt } = await this.pollTask(taskId, startTime);
+
+    // Counted from when Runway starts working, not from queueing
+    const generationTime = (Date.now() - (runningAt ?? startTime)) / 1000;
+
+    if (result.status === "SUCCEEDED" && result.output && result.output[0]) {
       return {
-        success: false,
+        success: true,
+        videoUrl: result.output[0],
         generationTime,
-        error: error instanceof Error ? error.message : String(error),
+        apiRequestId: taskId,
+        rawResponse: result,
       };
     }
+
+    return {
+      success: false,
+      generationTime,
+      error: result.failure || `Generation ${result.status.toLowerCase()} with unknown error`,
+      apiRequestId: taskId,
+      rawResponse: result,
+      // INTERNAL.* and THROTTLED failures are Runway-side; SAFETY.* and ASSET.* are not
+      retryable: /^(INTERNAL|THROTTLED)/.test(result.failure_code ?? ""),
+    };
   }
 
   private async createTask(
@@ -73,7 +99,7 @@ export class RunwayProvider implements VideoProvider {
   ): Promise<string> {
     // Runway API requires promptImage for image-to-video
     if (!request.sourceImageUrl) {
-      throw new Error("Runway image-to-video requires a source image");
+      throw new RunwayInputError("Runway image-to-video requires a source image");
     }
 
     // Extract special config fields from additionalParams before merging
@@ -122,8 +148,7 @@ export class RunwayProvider implements VideoProvider {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Runway API error: ${response.status} - ${error}`);
+      throw new RunwayHttpError(response.status, await response.text());
     }
 
     const data = await response.json();
@@ -132,10 +157,10 @@ export class RunwayProvider implements VideoProvider {
 
   private async pollTask(
     taskId: string,
-    maxAttempts = 120,
-    pollInterval = 5000
-  ): Promise<RunwayTaskResponse> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    startTime: number
+  ): Promise<{ task: RunwayTaskResponse; runningAt: number | null }> {
+    let runningAt: number | null = null;
+    while (Date.now() - startTime < MAX_WAIT_MS) {
       const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
@@ -144,20 +169,22 @@ export class RunwayProvider implements VideoProvider {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Runway API error: ${response.status} - ${error}`);
+        throw new RunwayHttpError(response.status, await response.text());
       }
 
       const data: RunwayTaskResponse = await response.json();
 
-      if (data.status === "SUCCEEDED" || data.status === "FAILED") {
-        return data;
+      if (data.status === "RUNNING" && runningAt === null) {
+        runningAt = Date.now();
+      }
+      if (data.status === "SUCCEEDED" || data.status === "FAILED" || data.status === "CANCELLED") {
+        return { task: data, runningAt };
       }
 
-      // Wait before next poll
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await sleep(POLL_INTERVAL_MS);
     }
 
-    throw new Error("Runway generation timeout after 10 minutes");
+    // Thrown, so the retry resumes this task instead of starting a new one
+    throw new Error(`Runway task ${taskId} still running after 30 minutes`);
   }
 }
