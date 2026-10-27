@@ -37,6 +37,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - R2_PUBLIC_URL=${R2_PUBLIC_URL}
     ports:
       - "3000:3000"
     environment:

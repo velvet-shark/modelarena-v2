@@ -147,14 +147,15 @@ model Vote {
   video   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   videoId String
 
-  // Anonymous voting with fingerprint to prevent duplicates
-  fingerprint String // Browser fingerprint hash
-  ipHash      String // Hashed IP for rate limiting
+  // Anonymous voting. fingerprint holds an HMAC of the server-issued voter
+  // cookie id (older rows hold FingerprintJS visitor ids).
+  fingerprint String
+  ipHash      String // HMAC of client IP, caps votes per network
 
   createdAt DateTime @default(now())
 
   @@unique([videoId, fingerprint])
-  @@index([videoId])
+  @@index([videoId, ipHash])
 }
 
 model Tag {

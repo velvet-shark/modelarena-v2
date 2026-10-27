@@ -66,10 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("[API] Error fetching model:", error);
     return NextResponse.json(
-      {
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : String(error),
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

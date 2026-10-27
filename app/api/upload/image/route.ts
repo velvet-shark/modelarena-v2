@@ -41,40 +41,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer();
-    let buffer: Buffer = Buffer.from(arrayBuffer);
+    const input = Buffer.from(await file.arrayBuffer());
 
-    // Process image with sharp: resize if needed and get dimensions
-    const image = sharp(buffer);
-    const metadata = await image.metadata();
-
-    let width = metadata.width;
-    let height = metadata.height;
-
-    // Resize if either dimension exceeds the max
-    if (width && height && (width > MAX_DIMENSION || height > MAX_DIMENSION)) {
-      console.log(`[API] Resizing image from ${width}x${height} to fit within ${MAX_DIMENSION}px`);
-
-      buffer = await image
+    // Always re-encode: applies EXIF orientation, strips metadata (GPS, camera
+    // serials) from the public file, and guarantees the bytes match image/jpeg.
+    let buffer: Buffer;
+    let width: number;
+    let height: number;
+    try {
+      const { data, info } = await sharp(input)
+        .rotate()
         .resize(MAX_DIMENSION, MAX_DIMENSION, {
           fit: "inside",
           withoutEnlargement: true,
         })
         .jpeg({ quality: 90 })
-        .toBuffer();
-
-      // Get new dimensions
-      const resizedMetadata = await sharp(buffer).metadata();
-      width = resizedMetadata.width;
-      height = resizedMetadata.height;
-
-      console.log(`[API] Resized image to ${width}x${height}`);
+        .toBuffer({ resolveWithObject: true });
+      buffer = data;
+      width = info.width;
+      height = info.height;
+    } catch {
+      return NextResponse.json(
+        { error: "File is not a valid image." },
+        { status: 400 }
+      );
     }
 
-    // Generate unique filename (always save as jpeg after processing)
-    const timestamp = Date.now();
-    const filename = `${timestamp}.jpeg`;
+    const filename = `${crypto.randomUUID()}.jpeg`;
 
     // Upload to R2
     const { url, key } = await uploadImage(buffer, filename);

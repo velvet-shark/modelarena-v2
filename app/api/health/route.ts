@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getConnection } from "@/src/lib/queue";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const checks: Record<string, { status: "ok" | "error"; message?: string }> = {
+  const checks: Record<string, { status: "ok" | "error" }> = {
     database: { status: "ok" },
     redis: { status: "ok" },
     app: { status: "ok" },
@@ -11,26 +13,21 @@ export async function GET() {
 
   let overallStatus = 200;
 
-  // Check database
+  // Details go to the server log only; this endpoint is public
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch (error) {
-    checks.database = {
-      status: "error",
-      message: error instanceof Error ? error.message : "Unknown error",
-    };
+    console.error("[Health] Database check failed:", error);
+    checks.database = { status: "error" };
     overallStatus = 503;
   }
 
-  // Check Redis
   try {
     const redis = getConnection();
     await redis.ping();
   } catch (error) {
-    checks.redis = {
-      status: "error",
-      message: error instanceof Error ? error.message : "Unknown error",
-    };
+    console.error("[Health] Redis check failed:", error);
+    checks.redis = { status: "error" };
     overallStatus = 503;
   }
 

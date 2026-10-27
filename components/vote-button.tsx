@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
@@ -13,6 +12,24 @@ interface VoteButtonProps {
   variant?: "default" | "overlay";
 }
 
+// UI hint only; the server dedupes votes with a signed cookie
+function readVoted(videoId: string): boolean {
+  try {
+    return localStorage.getItem(`voted_${videoId}`) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function writeVoted(videoId: string, voted: boolean) {
+  try {
+    if (voted) localStorage.setItem(`voted_${videoId}`, "1");
+    else localStorage.removeItem(`voted_${videoId}`);
+  } catch {
+    // Storage blocked (private mode); state just won't persist
+  }
+}
+
 export function VoteButton({
   videoId,
   initialVoteCount,
@@ -22,73 +39,39 @@ export function VoteButton({
 }: VoteButtonProps) {
   const [voteCount, setVoteCount] = useState(initialVoteCount);
   const [hasVoted, setHasVoted] = useState(false);
-  const [fingerprint, setFingerprint] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Get browser fingerprint
-    const getFingerprint = async () => {
-      try {
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
-        setFingerprint(result.visitorId);
-
-        // Check if already voted (stored in localStorage)
-        const voted = localStorage.getItem(`voted_${videoId}`);
-        if (voted === result.visitorId) {
-          setHasVoted(true);
-        }
-      } catch (error) {
-        console.error("Fingerprint error:", error);
-      }
-    };
-
-    getFingerprint();
+    setHasVoted(readVoted(videoId));
   }, [videoId]);
 
-  const handleVote = async () => {
-    if (!fingerprint || loading) return;
+  const handleVote = async (e: React.MouseEvent) => {
+    // Cards open a lightbox on click; voting shouldn't
+    e.stopPropagation();
+    if (loading) return;
 
     setLoading(true);
 
     try {
-      if (hasVoted) {
-        // Remove vote
-        const res = await fetch(`/api/videos/${videoId}/vote`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fingerprint }),
-        });
+      const res = await fetch(`/api/videos/${videoId}/vote`, {
+        method: hasVoted ? "DELETE" : "POST",
+      });
 
-        if (res.ok) {
-          setHasVoted(false);
-          setVoteCount((prev) => prev - 1);
-          localStorage.removeItem(`voted_${videoId}`);
-        } else {
-          const data = await res.json();
-          console.error("Unvote failed:", data.error);
-        }
+      if (res.ok) {
+        setVoteCount((prev) => prev + (hasVoted ? -1 : 1));
+        setHasVoted(!hasVoted);
+        writeVoted(videoId, !hasVoted);
+      } else if (!hasVoted && res.status === 409) {
+        // Already voted from this browser
+        setHasVoted(true);
+        writeVoted(videoId, true);
+      } else if (hasVoted && res.status === 404) {
+        // No server-side vote for this browser (e.g. cookies cleared)
+        setHasVoted(false);
+        writeVoted(videoId, false);
       } else {
-        // Add vote
-        const res = await fetch(`/api/videos/${videoId}/vote`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fingerprint }),
-        });
-
-        if (res.ok) {
-          setHasVoted(true);
-          setVoteCount((prev) => prev + 1);
-          localStorage.setItem(`voted_${videoId}`, fingerprint);
-        } else {
-          const data = await res.json();
-          if (data.error === "Already voted for this video") {
-            setHasVoted(true);
-            localStorage.setItem(`voted_${videoId}`, fingerprint);
-          } else {
-            console.error("Vote failed:", data.error);
-          }
-        }
+        const data = await res.json().catch(() => ({}));
+        console.error("Vote failed:", data.error ?? res.status);
       }
     } catch (error) {
       console.error("Vote error:", error);
@@ -98,12 +81,16 @@ export function VoteButton({
   };
 
   const displayCount = showZero || voteCount > 0;
+  const label = hasVoted ? `Remove vote (${voteCount} votes)` : `Vote for this video (${voteCount} votes)`;
 
   if (variant === "overlay") {
     return (
       <button
+        type="button"
         onClick={handleVote}
-        disabled={!fingerprint || loading}
+        disabled={loading}
+        aria-label={label}
+        aria-pressed={hasVoted}
         className={`group/vote flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-sm cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
           hasVoted
             ? "bg-black/50 hover:bg-black/70"
@@ -129,10 +116,12 @@ export function VoteButton({
   return (
     <Button
       onClick={handleVote}
-      disabled={!fingerprint || loading}
+      disabled={loading}
       variant={hasVoted ? "default" : "outline"}
       size="sm"
       className={className}
+      aria-label={label}
+      aria-pressed={hasVoted}
     >
       <Heart className={`h-4 w-4 ${displayCount ? "mr-1" : ""} ${hasVoted ? "fill-current" : ""}`} />
       {displayCount && voteCount}

@@ -43,6 +43,10 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# next/image allow-list is baked in at build time (see next.config.ts)
+ARG R2_PUBLIC_URL
+ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
+
 # Build the application
 RUN pnpm build
 
