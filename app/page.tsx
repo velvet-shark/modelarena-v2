@@ -3,97 +3,19 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { HomeMasonryGallery } from "@/components/home-masonry-gallery";
 import { ComparisonCard } from "@/components/comparison-card";
-import prisma from "@/lib/prisma";
+import { getHomeData } from "@/lib/data/public";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  // Get public comparisons with their videos
-  const comparisons = await prisma.comparison.findMany({
-    where: {
-      isPublic: true,
-    },
-    include: {
-      sourceImage: true,
-      videos: {
-        where: {
-          status: "COMPLETED",
-        },
-        include: {
-          model: {
-            include: {
-              provider: true,
-            },
-          },
-        },
-        orderBy: {
-          voteCount: "desc",
-        },
-      },
-    },
-    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    take: 50,
-  });
-
-  // Flatten to get all videos with their comparison context
-  const allVideos = comparisons.flatMap((comparison) =>
-    comparison.videos.map((video) => ({
-      id: video.id,
-      url: video.url,
-      thumbnailUrl: video.thumbnailUrl,
-      width: video.width,
-      height: video.height,
-      voteCount: video.voteCount,
-      comparison: {
-        slug: comparison.slug,
-        title: comparison.title,
-      },
-      model: {
-        name: video.model.name,
-        slug: video.model.slug,
-      },
-    }))
-  );
-
-  // Get stats
-  const modelCount = await prisma.model.count({
-    where: {
-      isActive: true,
-      videos: {
-        some: {
-          status: "COMPLETED",
-          comparison: { isPublic: true },
-        },
-      },
-    },
-  });
-
-  const comparisonCount = await prisma.comparison.count({
-    where: { isPublic: true },
-  });
-
-  // Get latest 6 comparisons for the "Latest Comparisons" section
-  const latestComparisons = await prisma.comparison.findMany({
-    where: { isPublic: true },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-    include: {
-      sourceImage: true,
-      videos: {
-        where: { status: "COMPLETED" },
-        include: { model: true },
-        orderBy: { voteCount: "desc" },
-      },
-      tags: true,
-    },
-  });
-
-  // Calculate totalVotes for each comparison
-  const latestComparisonsWithVotes = latestComparisons.map((comparison) => ({
-    ...comparison,
-    totalVotes: comparison.videos.reduce((sum, v) => sum + v.voteCount, 0),
-  }));
+  const {
+    latestComparisons: latestComparisonsWithVotes,
+    videos: allVideos,
+    modelCount,
+    comparisonCount,
+    videoCount,
+  } = await getHomeData();
 
   return (
     <main className="min-h-screen">
@@ -135,7 +57,7 @@ export default async function HomePage() {
               <div className="text-xs sm:text-sm text-muted-foreground">Comparisons</div>
             </div>
             <div>
-              <div className="font-display text-2xl sm:text-3xl font-bold">{allVideos.length}</div>
+              <div className="font-display text-2xl sm:text-3xl font-bold">{videoCount}</div>
               <div className="text-xs sm:text-sm text-muted-foreground">Videos</div>
             </div>
           </div>

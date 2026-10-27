@@ -4,7 +4,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ComparisonSearch } from "@/components/comparison-search";
 import { ComparisonCard } from "@/components/comparison-card";
-import prisma from "@/lib/prisma";
+import { getComparisonList } from "@/lib/data/public";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
@@ -30,6 +30,7 @@ interface SearchParams {
   tag?: string;
   q?: string;
   sort?: string;
+  page?: string;
 }
 
 interface PageProps {
@@ -39,102 +40,19 @@ interface PageProps {
 export default async function ComparisonsPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  // Build where clause based on filters
-  const whereClause: any = {
-    isPublic: true,
-  };
-
-  if (params.type) {
-    whereClause.type = params.type;
-  }
-
-  if (params.tag) {
-    whereClause.tags = {
-      some: {
-        slug: params.tag,
-      },
-    };
-  }
-
-  if (params.q) {
-    whereClause.OR = [
-      {
-        title: {
-          contains: params.q,
-          mode: "insensitive",
-        },
-      },
-      {
-        description: {
-          contains: params.q,
-          mode: "insensitive",
-        },
-      },
-      {
-        prompt: {
-          contains: params.q,
-          mode: "insensitive",
-        },
-      },
-    ];
-  }
-
-  const comparisons = await prisma.comparison.findMany({
-    where: whereClause,
-    include: {
-      sourceImage: true,
-      videos: {
-        where: {
-          status: "COMPLETED",
-        },
-        include: {
-          model: true,
-        },
-        orderBy: {
-          voteCount: "desc",
-        },
-      },
-      tags: true,
-    },
-  });
-
-  // Calculate total votes per comparison
-  const comparisonsWithVotes = comparisons.map((comparison) => {
-    const totalVotes = comparison.videos.reduce(
-      (sum, video) => sum + video.voteCount,
-      0
-    );
-    return {
-      ...comparison,
-      totalVotes,
-    };
-  });
-
-  // Sort comparisons
-  const sortOption = params.sort || "votes";
-  const sortedComparisons = [...comparisonsWithVotes].sort((a, b) => {
-    switch (sortOption) {
-      case "votes":
-        if (a.isFeatured !== b.isFeatured) return b.isFeatured ? 1 : -1;
-        return b.totalVotes - a.totalVotes;
-      case "newest":
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      case "oldest":
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-      default:
-        return b.totalVotes - a.totalVotes;
-    }
-  });
-
-  // Get all tags for filter
-  const allTags = await prisma.tag.findMany({
-    orderBy: {
-      name: "asc",
-    },
+  const {
+    comparisons: sortedComparisons,
+    tags: allTags,
+    total,
+    page,
+    pageCount,
+    sort: sortOption,
+  } = await getComparisonList({
+    type: params.type,
+    tag: params.tag,
+    q: params.q,
+    sort: params.sort,
+    page: Number(params.page) || 1,
   });
 
   const typeOptions = [
@@ -242,9 +160,9 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <p className="text-muted-foreground text-sm sm:text-base">
             <span className="font-display text-foreground font-semibold">
-              {sortedComparisons.length}
+              {total}
             </span>{" "}
-            comparison{sortedComparisons.length !== 1 ? "s" : ""}
+            comparison{total !== 1 ? "s" : ""}
           </p>
           <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0">
             {sortOptions.map((option) => (
@@ -287,6 +205,31 @@ export default async function ComparisonsPage({ searchParams }: PageProps) {
               Clear Filters
             </Link>
           </div>
+        )}
+
+        {/* Pagination */}
+        {pageCount > 1 && (
+          <nav aria-label="Pagination" className="flex items-center justify-center gap-3 text-sm">
+            {page > 1 ? (
+              <Link
+                href={buildUrl({ page: page > 2 ? String(page - 1) : undefined })}
+                className="px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+              >
+                ← Previous
+              </Link>
+            ) : null}
+            <span className="text-muted-foreground">
+              Page {page} of {pageCount}
+            </span>
+            {page < pageCount ? (
+              <Link
+                href={buildUrl({ page: String(page + 1) })}
+                className="px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+              >
+                Next →
+              </Link>
+            ) : null}
+          </nav>
         )}
 
         <Footer />

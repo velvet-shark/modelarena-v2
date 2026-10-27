@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getGenerationQueue } from "@/src/lib/queue";
+import { apiComparisonSelect } from "@/lib/data/public";
 import { z } from "zod";
 
 // Validation schema
@@ -32,19 +33,7 @@ export async function GET(request: NextRequest) {
 
   const comparisons = await prisma.comparison.findMany({
     where: isPublic ? { isPublic: true } : {},
-    include: {
-      sourceImage: true,
-      videos: {
-        include: {
-          model: {
-            include: {
-              provider: true,
-            },
-          },
-        },
-      },
-      tags: true,
-    },
+    select: { ...apiComparisonSelect, isPublic: true },
     orderBy: {
       createdAt: "desc",
     },

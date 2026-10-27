@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ModelVideoGrid } from "@/components/model-video-grid";
-import prisma from "@/lib/prisma";
+import { getPublicModel } from "@/lib/data/public";
+import { siteUrl } from "@/lib/site";
 import { formatCost } from "@/src/lib/format-cost";
 
 // Force dynamic rendering - requires database connection
@@ -19,20 +20,7 @@ export async function generateMetadata({
 }: ModelPageProps): Promise<Metadata> {
   const { slug } = await params;
 
-  const model = await prisma.model.findUnique({
-    where: { slug },
-    include: {
-      provider: true,
-      capabilities: true,
-      _count: {
-        select: {
-          videos: {
-            where: { status: "COMPLETED" },
-          },
-        },
-      },
-    },
-  });
+  const model = await getPublicModel(slug);
 
   if (!model) {
     return {
@@ -41,9 +29,8 @@ export async function generateMetadata({
   }
 
   const capabilities = model.capabilities.map((c) => c.name).join(", ");
-  const description = `${model.name} by ${model.provider.displayName} - View ${model._count.videos} AI-generated videos${capabilities ? `. Supports ${capabilities}` : ""}.`;
-  const baseUrl = process.env.NEXTAUTH_URL || "https://modelarena.ai";
-  const ogImageUrl = `${baseUrl}/api/og?type=model&slug=${slug}`;
+  const description = `${model.name} by ${model.provider.displayName} - View ${model.videoCount} AI-generated videos${capabilities ? `. Supports ${capabilities}` : ""}.`;
+  const ogImageUrl = `${siteUrl}/api/og?type=model&slug=${encodeURIComponent(slug)}`;
 
   return {
     title: model.name,
@@ -72,66 +59,13 @@ export async function generateMetadata({
 export default async function ModelPage({ params }: ModelPageProps) {
   const { slug } = await params;
 
-  const model = await prisma.model.findUnique({
-    where: { slug },
-    include: {
-      provider: true,
-      capabilities: true,
-      videos: {
-        where: {
-          status: "COMPLETED",
-          comparison: {
-            isPublic: true,
-          },
-        },
-        include: {
-          comparison: {
-            include: {
-              sourceImage: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      },
-      _count: {
-        select: {
-          videos: {
-            where: {
-              status: "COMPLETED",
-            },
-          },
-        },
-      },
-    },
-  });
+  const model = await getPublicModel(slug);
 
   if (!model) {
     notFound();
   }
 
-  // Calculate average metrics
-  const completedVideos = model.videos.filter((v) => v.generationTime);
-  const avgGenerationTime =
-    completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.generationTime || 0), 0) /
-        completedVideos.length
-      : null;
-
-  const avgDuration =
-    completedVideos.length > 0
-      ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) /
-        completedVideos.length
-      : null;
-
-  const videosWithCost = model.videos.filter((v) => v.cost !== null);
-  const avgCost =
-    videosWithCost.length > 0
-      ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) /
-        videosWithCost.length
-      : null;
+  const { avgGenerationTime, avgDuration, avgCost } = model;
 
   return (
     <main className="min-h-screen">
@@ -187,18 +121,12 @@ export default async function ModelPage({ params }: ModelPageProps) {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="rounded-xl border bg-card p-5">
-            <div className="text-sm text-muted-foreground">Total Videos</div>
+            <div className="text-sm text-muted-foreground">Videos</div>
             <div className="font-display text-3xl font-bold mt-1">
-              {model._count.videos}
+              {model.videoCount}
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-5">
-            <div className="text-sm text-muted-foreground">Public Videos</div>
-            <div className="font-display text-3xl font-bold mt-1">
-              {model.videos.length}
-            </div>
-          </div>
-          {avgGenerationTime && (
+          {avgGenerationTime != null && (
             <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Gen Time</div>
               <div className="font-display text-3xl font-bold mt-1">
@@ -206,7 +134,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
               </div>
             </div>
           )}
-          {avgDuration && (
+          {avgDuration != null && (
             <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Duration</div>
               <div className="font-display text-3xl font-bold mt-1">
@@ -214,7 +142,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
               </div>
             </div>
           )}
-          {avgCost !== null && (
+          {avgCost != null && (
             <div className="rounded-xl border bg-card p-5">
               <div className="text-sm text-muted-foreground">Avg Cost</div>
               <div className="font-display text-3xl font-bold mt-1">

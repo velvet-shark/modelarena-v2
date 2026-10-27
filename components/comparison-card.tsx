@@ -4,32 +4,35 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 
-interface ComparisonCardProps {
-  comparison: {
+export interface ComparisonCardData {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  type: string;
+  totalVotes: number;
+  isFeatured: boolean;
+  sourceImage: {
+    url: string;
+  } | null;
+  // Most-voted completed video
+  previewVideo: {
+    url: string | null;
+    thumbnailUrl: string | null;
+    width: number | null;
+    height: number | null;
+  } | null;
+  // Number of completed videos
+  modelCount: number;
+  tags: Array<{
     id: string;
+    name: string;
     slug: string;
-    title: string;
-    description: string | null;
-    type: string;
-    totalVotes: number;
-    isFeatured: boolean;
-    sourceImage: {
-      url: string;
-    } | null;
-    videos: Array<{
-      id: string;
-      url: string | null;
-      thumbnailUrl: string | null;
-      width: number | null;
-      height: number | null;
-      status: string;
-    }>;
-    tags: Array<{
-      id: string;
-      name: string;
-      slug: string;
-    }>;
-  };
+  }>;
+}
+
+interface ComparisonCardProps {
+  comparison: ComparisonCardData;
 }
 
 export function ComparisonCard({ comparison }: ComparisonCardProps) {
@@ -37,11 +40,7 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Get the first completed video for preview
-  const previewVideo = comparison.videos[0];
-  const completedCount = comparison.videos.filter(
-    (v) => v.status === "COMPLETED"
-  ).length;
+  const { previewVideo, modelCount: completedCount } = comparison;
 
   // Calculate aspect ratio from the first video
   const isVertical =

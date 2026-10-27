@@ -2,83 +2,15 @@ import Link from "next/link";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { PerformanceCharts } from "@/components/performance-charts";
-import prisma from "@/lib/prisma";
+import { getModelPerformance } from "@/lib/data/public";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  // Fetch model performance data
-  const models = await prisma.model.findMany({
-    where: { isActive: true },
-    include: {
-      videos: {
-        where: {
-          comparison: {
-            isPublic: true,
-          },
-        },
-        select: {
-          status: true,
-          generationTime: true,
-          duration: true,
-          cost: true,
-          voteCount: true,
-        },
-      },
-    },
-  });
+  // Aggregated in the database; averages skip videos without timing data
+  const { performanceData, totalModels } = await getModelPerformance();
 
-  // Calculate aggregated stats
-  const performanceData = models
-    .map((model) => {
-      const completedVideos = model.videos.filter(
-        (v) => v.status === "COMPLETED"
-      );
-      const failedVideos = model.videos.filter((v) => v.status === "FAILED");
-
-      const avgGenerationTime =
-        completedVideos.length > 0
-          ? completedVideos.reduce(
-              (sum, v) => sum + (v.generationTime || 0),
-              0
-            ) / completedVideos.length
-          : 0;
-
-      const avgDuration =
-        completedVideos.length > 0
-          ? completedVideos.reduce((sum, v) => sum + (v.duration || 0), 0) /
-            completedVideos.length
-          : 0;
-
-      const videosWithCost = completedVideos.filter(
-        (v) => v.cost !== null && v.cost > 0
-      );
-      const avgCost =
-        videosWithCost.length > 0
-          ? videosWithCost.reduce((sum, v) => sum + (v.cost || 0), 0) /
-            videosWithCost.length
-          : 0;
-
-      const totalVotes = completedVideos.reduce(
-        (sum, v) => sum + v.voteCount,
-        0
-      );
-
-      return {
-        modelName: model.name,
-        avgGenerationTime,
-        avgDuration,
-        avgCost,
-        totalVideos: model.videos.length,
-        completedVideos: completedVideos.length,
-        failedVideos: failedVideos.length,
-        totalVotes,
-      };
-    })
-    .filter((d) => d.totalVideos > 0);
-
-  const totalModels = models.length;
   const totalVideos = performanceData.reduce((sum, d) => sum + d.totalVideos, 0);
   const completedVideos = performanceData.reduce(
     (sum, d) => sum + d.completedVideos,

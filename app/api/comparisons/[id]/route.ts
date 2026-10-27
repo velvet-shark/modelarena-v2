@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { deleteFile } from "@/lib/storage/r2";
+import { apiComparisonSelect } from "@/lib/data/public";
 
 // GET /api/comparisons/[id] - Get a single comparison (public)
 export async function GET(
@@ -11,30 +12,12 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const comparison = await prisma.comparison.findUnique({
+    const comparison = await prisma.comparison.findFirst({
       where: {
         id,
         isPublic: true,
       },
-      include: {
-        sourceImage: true,
-        tags: true,
-        videos: {
-          where: {
-            status: "COMPLETED",
-          },
-          include: {
-            model: {
-              include: {
-                provider: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        },
-      },
+      select: apiComparisonSelect,
     });
 
     if (!comparison) {

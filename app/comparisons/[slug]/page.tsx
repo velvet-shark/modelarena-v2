@@ -5,7 +5,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ComparisonSidebar } from "@/components/comparison-sidebar";
 import { ComparisonVideoGrid } from "@/components/comparison-video-grid";
-import prisma from "@/lib/prisma";
+import { getPublicComparison } from "@/lib/data/public";
+import { siteUrl } from "@/lib/site";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
@@ -19,25 +20,15 @@ export async function generateMetadata({
 }: ComparisonPageProps): Promise<Metadata> {
   const { slug } = await params;
 
-  const comparison = await prisma.comparison.findUnique({
-    where: { slug },
-    include: {
-      sourceImage: true,
-      videos: {
-        where: { status: "COMPLETED" },
-        take: 1,
-      },
-    },
-  });
+  const comparison = await getPublicComparison(slug);
 
-  if (!comparison || !comparison.isPublic) {
+  if (!comparison) {
     return {
       title: "Comparison Not Found",
     };
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || "https://modelarena.ai";
-  const ogImageUrl = `${baseUrl}/api/og?type=comparison&slug=${slug}`;
+  const ogImageUrl = `${siteUrl}/api/og?type=comparison&slug=${encodeURIComponent(slug)}`;
 
   return {
     title: comparison.title,
@@ -71,30 +62,9 @@ export async function generateMetadata({
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { slug } = await params;
 
-  const comparison = await prisma.comparison.findUnique({
-    where: { slug },
-    include: {
-      sourceImage: true,
-      videos: {
-        where: {
-          status: "COMPLETED",
-        },
-        include: {
-          model: {
-            include: {
-              provider: true,
-            },
-          },
-        },
-        orderBy: {
-          voteCount: "desc",
-        },
-      },
-      tags: true,
-    },
-  });
+  const comparison = await getPublicComparison(slug);
 
-  if (!comparison || !comparison.isPublic) {
+  if (!comparison) {
     notFound();
   }
 
@@ -202,25 +172,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
           {/* Video Grid */}
           <div className="flex-1 min-w-0">
             <ComparisonVideoGrid
-              videos={comparison.videos.map((v) => ({
-                id: v.id,
-                url: v.url,
-                thumbnailUrl: v.thumbnailUrl,
-                generationTime: v.generationTime,
-                duration: v.duration,
-                width: v.width,
-                height: v.height,
-                cost: v.cost,
-                voteCount: v.voteCount,
-                createdAt: v.createdAt.toISOString(),
-                model: {
-                  slug: v.model.slug,
-                  name: v.model.name,
-                  provider: {
-                    displayName: v.model.provider.displayName,
-                  },
-                },
-              }))}
+              videos={comparison.videos}
             />
           </div>
         </div>

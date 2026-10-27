@@ -101,14 +101,11 @@ function VideoCard({ video }: { video: Video }) {
 }
 
 export function HomeMasonryGallery({ videos }: HomeMasonryGalleryProps) {
-  // Sort videos to create a balanced masonry layout
-  // Alternate between vertical and horizontal for visual interest
-  const sortedVideos = [...videos].slice(0, 24); // Limit to 24 for homepage
-
+  // The server already limits and orders the list
   return (
     <div className="px-4 sm:px-6">
       <div className="masonry masonry-md-3 masonry-lg-4 masonry-xl-5">
-        {sortedVideos.map((video) => (
+        {videos.map((video) => (
           <VideoCard key={video.id} video={video} />
         ))}
       </div>

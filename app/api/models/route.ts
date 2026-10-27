@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { publicCompletedVideo } from "@/lib/data/public";
 
 // GET /api/models - List all active models
 export async function GET(request: NextRequest) {
@@ -8,16 +9,17 @@ export async function GET(request: NextRequest) {
       where: {
         isActive: true,
       },
-      include: {
-        provider: true,
-        capabilities: true,
+      // No endpoint/defaultParams: provider config isn't public
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        brand: true,
+        provider: { select: { name: true, displayName: true } },
+        capabilities: { select: { name: true } },
         _count: {
           select: {
-            videos: {
-              where: {
-                status: "COMPLETED",
-              },
-            },
+            videos: { where: publicCompletedVideo },
           },
         },
       },

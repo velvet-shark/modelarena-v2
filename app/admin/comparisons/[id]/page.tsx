@@ -93,7 +93,17 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       </div>
 
       {/* Edit Form */}
-      <ComparisonEditForm comparison={comparison} availableTags={allTags} />
+      <ComparisonEditForm
+        comparison={{
+          id: comparison.id,
+          title: comparison.title,
+          description: comparison.description,
+          isPublic: comparison.isPublic,
+          isFeatured: comparison.isFeatured,
+          tags: comparison.tags,
+        }}
+        availableTags={allTags}
+      />
 
       {comparison.description && (
         <div className="border rounded-lg p-4">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { apiVideoFields, publicCompletedVideo } from "@/lib/data/public";
 import { z } from "zod";
 
 interface RouteParams {
@@ -24,20 +25,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const model = await prisma.model.findUnique({
       where: { slug },
-      include: {
-        provider: true,
-        capabilities: true,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        brand: true,
+        isActive: true,
+        provider: { select: { name: true, displayName: true } },
+        capabilities: { select: { name: true } },
         videos: {
-          where: {
-            status: "COMPLETED",
+          where: publicCompletedVideo,
+          select: {
+            ...apiVideoFields,
             comparison: {
-              isPublic: true,
-            },
-          },
-          include: {
-            comparison: {
-              include: {
-                sourceImage: true,
+              select: {
+                slug: true,
+                title: true,
+                prompt: true,
+                sourceImage: { select: { url: true, width: true, height: true } },
               },
             },
           },
@@ -48,17 +53,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         },
         _count: {
           select: {
-            videos: {
-              where: {
-                status: "COMPLETED",
-              },
-            },
+            videos: { where: publicCompletedVideo },
           },
         },
       },
     });
 
-    if (!model) {
+    // Same rule as the model page: hide inactive models with nothing public
+    if (!model || (!model.isActive && model._count.videos === 0)) {
       return NextResponse.json({ error: "Model not found" }, { status: 404 });
     }
 
