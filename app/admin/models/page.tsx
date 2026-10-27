@@ -156,7 +156,7 @@ export default function ModelsPage() {
       const parsed = JSON.parse(paramsJson);
       setParamsError(null);
 
-      const response = await fetch(`/api/models/${paramsEditorModel.slug}`, {
+      const response = await fetch(`/api/admin/models/${paramsEditorModel.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ defaultParams: parsed }),
@@ -211,7 +211,7 @@ export default function ModelsPage() {
 
   const toggleActive = async (model: Model) => {
     try {
-      const response = await fetch(`/api/models/${model.slug}`, {
+      const response = await fetch(`/api/admin/models/${model.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !model.isActive }),

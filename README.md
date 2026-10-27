@@ -179,22 +179,30 @@ The system will queue jobs, process them in parallel, upload videos to R2, and g
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/comparisons` | GET | List public comparisons |
-| `/api/comparisons/slug/[slug]` | GET | Get comparison by slug |
+| `/api/comparisons?public=true` | GET | List public comparisons |
+| `/api/comparisons/[id]` | GET | Get public comparison by id |
+| `/api/comparisons/slug/[slug]` | GET | Get public comparison by slug |
 | `/api/models` | GET | List active models |
 | `/api/models/[slug]` | GET | Model details |
-| `/api/videos/[id]/vote` | POST/DELETE | Vote for video |
+| `/api/videos/[id]/vote` | POST/DELETE | Vote for video (same-origin only) |
+| `/api/og` | GET | Open Graph image |
 | `/api/health` | GET | Health check |
 
 ### Admin Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/comparisons` | POST | Create comparison |
+| `/api/comparisons` | GET/POST | List all/create comparison |
 | `/api/comparisons/[id]` | PATCH/DELETE | Update/delete comparison |
+| `/api/comparisons/[id]/add-models` | POST | Generate more models for a comparison |
+| `/api/videos/[id]` | PATCH/DELETE | Edit metrics/delete video |
 | `/api/videos/[id]/retry` | POST | Retry failed generation |
-| `/api/upload/video` | POST | Manual video upload |
+| `/api/upload/image` | POST | Upload source image |
+| `/api/upload/video/presign` + `/complete` | POST | Manual video upload straight to R2 |
+| `/api/upload/video` | POST | Manual video upload through the app (fallback) |
 | `/api/admin/models` | GET/POST | List/create models |
+| `/api/admin/models/[id]` | PATCH/DELETE | Update/delete model |
+| `/api/jobs`, `/api/jobs/stream` | GET | Queue status (JSON, SSE) |
 
 ## Project Structure
 

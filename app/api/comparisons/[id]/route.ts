@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { comparisonUpdateSchema, invalidInput } from "@/lib/admin-input";
 import { deleteFiles } from "@/src/lib/storage/r2";
 import { revalidatePublicData, apiComparisonSelect } from "@/lib/data/public";
 
@@ -47,44 +49,25 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { title, description, isPublic, isFeatured, tagIds } = body;
+    const parsed = comparisonUpdateSchema.safeParse(await request.json());
+    if (!parsed.success) return invalidInput(parsed.error);
+    const { tagIds, ...fields } = parsed.data;
 
-    // Build update data
-    const updateData: any = {};
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (isPublic !== undefined) updateData.isPublic = isPublic;
-    if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
-
-    // Handle tags update
-    if (tagIds !== undefined) {
-      updateData.tags = {
-        set: tagIds.map((tagId: string) => ({ id: tagId })),
-      };
-    }
-
+    // Callers only check the status and refresh, so return the row alone
     const comparison = await prisma.comparison.update({
       where: { id },
-      data: updateData,
-      include: {
-        sourceImage: true,
-        tags: true,
-        videos: {
-          include: {
-            model: {
-              include: {
-                provider: true,
-              },
-            },
-          },
-        },
+      data: {
+        ...fields,
+        ...(tagIds && { tags: { set: tagIds.map((tagId) => ({ id: tagId })) } }),
       },
     });
 
     revalidatePublicData();
     return NextResponse.json({ comparison });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Comparison not found" }, { status: 404 });
+    }
     console.error("Error updating comparison:", error);
     return NextResponse.json(
       { error: "Failed to update comparison" },

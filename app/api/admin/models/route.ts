@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { revalidatePublicData } from "@/lib/data/public";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { invalidInput, modelCreateSchema } from "@/lib/admin-input";
 
 // GET /api/admin/models - List all models (including inactive)
 export async function GET(request: NextRequest) {
@@ -40,24 +42,10 @@ export async function POST(request: NextRequest) {
   if (denied) return denied;
 
   try {
-    const body = await request.json();
-    const {
-      slug,
-      name,
-      providerId,
-      endpoint,
-      capabilityIds,
-      isActive,
-      costPerSecond,
-      defaultParams,
-    } = body;
-
-    if (!slug || !name || !providerId) {
-      return NextResponse.json(
-        { error: "Missing required fields: slug, name, providerId" },
-        { status: 400 }
-      );
-    }
+    const parsed = modelCreateSchema.safeParse(await request.json());
+    if (!parsed.success) return invalidInput(parsed.error);
+    // brand and endpointT2V used to be dropped here although the form sends them
+    const { slug, providerId, capabilityIds, defaultParams, ...fields } = parsed.data;
 
     // Check if slug already exists
     const existing = await prisma.model.findUnique({
@@ -73,17 +61,13 @@ export async function POST(request: NextRequest) {
 
     const model = await prisma.model.create({
       data: {
+        ...fields,
         slug,
-        name,
         providerId,
-        endpoint,
-        isActive: isActive ?? true,
-        costPerSecond: costPerSecond ? parseFloat(costPerSecond) : null,
-        defaultParams: defaultParams || undefined,
+        isActive: fields.isActive ?? true,
+        defaultParams: (defaultParams ?? undefined) as Prisma.InputJsonValue | undefined,
         capabilities: capabilityIds?.length
-          ? {
-              connect: capabilityIds.map((id: string) => ({ id })),
-            }
+          ? { connect: capabilityIds.map((id) => ({ id })) }
           : undefined,
       },
       include: {

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { revalidatePublicData } from "@/lib/data/public";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { invalidInput, modelData, modelUpdateSchema } from "@/lib/admin-input";
 
-// PATCH /api/admin/models/[id] - Update a model
+// PATCH /api/admin/models/[id] - Update a model (any subset of fields)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -13,41 +15,12 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body = await request.json();
-    const { name, endpoint, isActive, costPerSecond, capabilityIds, defaultParams } = body;
-
-    // Build update data
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (endpoint !== undefined) updateData.endpoint = endpoint;
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (costPerSecond !== undefined)
-      updateData.costPerSecond = costPerSecond ? parseFloat(costPerSecond) : null;
-    if (defaultParams !== undefined) updateData.defaultParams = defaultParams;
-
-    // Handle capabilities update
-    if (capabilityIds !== undefined) {
-      // First disconnect all existing capabilities
-      await prisma.model.update({
-        where: { id },
-        data: {
-          capabilities: {
-            set: [],
-          },
-        },
-      });
-
-      // Then connect the new ones
-      if (capabilityIds.length > 0) {
-        updateData.capabilities = {
-          connect: capabilityIds.map((capId: string) => ({ id: capId })),
-        };
-      }
-    }
+    const parsed = modelUpdateSchema.safeParse(await request.json());
+    if (!parsed.success) return invalidInput(parsed.error);
 
     const model = await prisma.model.update({
       where: { id },
-      data: updateData,
+      data: modelData(parsed.data),
       include: {
         provider: true,
         capabilities: true,
@@ -57,6 +30,9 @@ export async function PATCH(
     revalidatePublicData();
     return NextResponse.json({ model });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Model not found" }, { status: 404 });
+    }
     console.error("Error updating model:", error);
     return NextResponse.json(
       { error: "Failed to update model" },
