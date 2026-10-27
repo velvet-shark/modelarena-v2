@@ -88,6 +88,8 @@ function VideoCard({
           {video.thumbnailUrl && (
             <img
               src={video.thumbnailUrl}
+              loading="lazy"
+              decoding="async"
               alt={video.comparison.title}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 isPlaying ? "opacity-0" : "opacity-100"
@@ -333,6 +335,8 @@ function VideoCardGrid({
         {video.thumbnailUrl && (
           <img
             src={video.thumbnailUrl}
+            loading="lazy"
+            decoding="async"
             alt={video.comparison.title}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-0" : "opacity-100"

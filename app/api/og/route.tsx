@@ -1,6 +1,15 @@
-import { ImageResponse } from "@vercel/og";
+import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
+
+// Crawlers and CDNs can reuse an image for a day; titles rarely change
+const OG_OPTIONS = {
+  width: 1200,
+  height: 630,
+  headers: {
+    "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+  },
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -163,7 +172,7 @@ export async function GET(request: NextRequest) {
             </div>
           </div>
         ),
-        { width: 1200, height: 630 }
+        OG_OPTIONS
       );
     }
   }
@@ -311,7 +320,7 @@ export async function GET(request: NextRequest) {
             </div>
           </div>
         ),
-        { width: 1200, height: 630 }
+        OG_OPTIONS
       );
     }
   }
@@ -423,7 +432,7 @@ export async function GET(request: NextRequest) {
         </div>
       </div>
     ),
-    { width: 1200, height: 630 }
+    OG_OPTIONS
   );
   } catch (error) {
     console.error("OG Image generation error:", error);

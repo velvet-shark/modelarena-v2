@@ -6,7 +6,7 @@ import {
   enqueueGenerations,
   modelsMissingEndpoint,
 } from "@/src/lib/queue/enqueue";
-import { apiComparisonSelect } from "@/lib/data/public";
+import { revalidatePublicData, apiComparisonSelect } from "@/lib/data/public";
 import { z } from "zod";
 
 // Validation schema
@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidatePublicData();
     return NextResponse.json(fullComparison, { status: 201 });
   } catch (error) {
     console.error("[API] Error creating comparison:", error);

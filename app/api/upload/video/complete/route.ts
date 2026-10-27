@@ -4,6 +4,7 @@ import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { revalidatePublicData } from "@/lib/data/public";
 import {
   STAGING_KEY,
   ManualUploadError,
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       fields
     );
 
+    revalidatePublicData();
     return NextResponse.json({ success: true, videoId });
   } catch (error) {
     if (videoId) await failManualVideo(videoId, error);

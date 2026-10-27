@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { revalidatePublicData } from "@/lib/data/public";
 import prisma from "@/lib/prisma";
 
 // GET /api/admin/models - List all models (including inactive)
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidatePublicData();
     return NextResponse.json({ model });
   } catch (error) {
     console.error("Error creating model:", error);

@@ -368,6 +368,8 @@ export function ComparisonsListBulk({
                   {comparison.sourceImage && (
                     <img
                       src={comparison.sourceImage.url}
+                      loading="lazy"
+                      decoding="async"
                       alt=""
                       className="w-24 h-24 object-cover rounded"
                     />

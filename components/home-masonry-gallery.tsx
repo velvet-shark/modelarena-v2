@@ -64,6 +64,8 @@ function VideoCard({ video }: { video: Video }) {
         {video.thumbnailUrl && (
           <img
             src={video.thumbnailUrl}
+            loading="lazy"
+            decoding="async"
             alt={video.model.name}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-0" : "opacity-100"

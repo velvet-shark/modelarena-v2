@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { apiVideoFields, publicCompletedVideo } from "@/lib/data/public";
+import { revalidatePublicData, apiVideoFields, publicCompletedVideo } from "@/lib/data/public";
 import { z } from "zod";
 
 interface RouteParams {
@@ -112,6 +112,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    revalidatePublicData();
     return NextResponse.json(updatedModel);
   } catch (error) {
     console.error("[API] Error updating model:", error);

@@ -7,6 +7,7 @@ import { pipeline } from "stream/promises";
 import type { ReadableStream as WebReadableStream } from "stream/web";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { revalidatePublicData } from "@/lib/data/public";
 import {
   ManualUploadError,
   checkManualVideoFile,
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       fields
     );
 
+    revalidatePublicData();
     return NextResponse.json({ success: true, videoId });
   } catch (error) {
     if (videoId) await failManualVideo(videoId, error);

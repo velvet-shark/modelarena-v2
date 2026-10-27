@@ -28,6 +28,10 @@ const r2Client = new S3Client({
 const BUCKET = process.env.R2_BUCKET_NAME || "";
 const PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
 
+// Each key is written once for its video/image row (a re-upload gets a new
+// row id, a source image a new uuid), so CDN and browsers can keep it forever
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
 export async function uploadVideo(
   buffer: Buffer,
   key: string
@@ -40,6 +44,7 @@ export async function uploadVideo(
       Key: fullKey,
       Body: buffer,
       ContentType: "video/mp4",
+      CacheControl: IMMUTABLE,
     })
   );
 
@@ -61,6 +66,7 @@ export async function uploadImage(
       Key: fullKey,
       Body: buffer,
       ContentType: "image/jpeg",
+      CacheControl: IMMUTABLE,
     })
   );
 
@@ -82,6 +88,7 @@ export async function uploadThumbnail(
       Key: fullKey,
       Body: buffer,
       ContentType: "image/jpeg",
+      CacheControl: IMMUTABLE,
     })
   );
 
@@ -114,6 +121,7 @@ export async function uploadFile(
       Body: createReadStream(path),
       ContentLength: size,
       ContentType: contentType,
+      CacheControl: IMMUTABLE,
     })
   );
   return { key, url: `${PUBLIC_URL}/${key}` };
@@ -156,6 +164,7 @@ export async function copyObject(
       CopySource: `${BUCKET}/${from}`,
       Key: to,
       ContentType: contentType,
+      CacheControl: IMMUTABLE,
       MetadataDirective: "REPLACE",
     })
   );

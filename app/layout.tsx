@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/components/auth-provider";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -96,7 +95,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: 'window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }' }} />
       </head>
       <body className={`${plusJakarta.variable} ${outfit.variable} font-sans`}>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );

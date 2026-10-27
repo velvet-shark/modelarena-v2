@@ -85,6 +85,8 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
           {thumbnailUrl && (
             <img
               src={thumbnailUrl}
+              loading="lazy"
+              decoding="async"
               alt={comparison.title}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 isPlaying ? "opacity-0" : "opacity-100"

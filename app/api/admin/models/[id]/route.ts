@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { revalidatePublicData } from "@/lib/data/public";
 import prisma from "@/lib/prisma";
 
 // PATCH /api/admin/models/[id] - Update a model
@@ -53,6 +54,7 @@ export async function PATCH(
       },
     });
 
+    revalidatePublicData();
     return NextResponse.json({ model });
   } catch (error) {
     console.error("Error updating model:", error);
@@ -92,6 +94,7 @@ export async function DELETE(
       where: { id },
     });
 
+    revalidatePublicData();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting model:", error);

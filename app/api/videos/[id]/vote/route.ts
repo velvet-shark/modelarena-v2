@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { rateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 import { getVoterId, setVoterCookie, voterKey, hashIp, isSameOrigin } from "@/lib/voter";
+import { revalidateVotedVideo } from "@/lib/data/public";
 
 // Caps cookie-clearing scripts from one address while still letting a shared
 // NAT (office, mobile carrier) cast a few legitimate votes per video.
@@ -41,7 +42,11 @@ export async function POST(
   try {
     const video = await prisma.video.findUnique({
       where: { id },
-      select: { status: true, comparison: { select: { isPublic: true } } },
+      select: {
+        status: true,
+        comparison: { select: { isPublic: true, slug: true } },
+        model: { select: { slug: true } },
+      },
     });
 
     if (!video || !video.comparison.isPublic) {
@@ -67,6 +72,7 @@ export async function POST(
       }),
     ]);
 
+    revalidateVotedVideo(video);
     return respond({ success: true }, { status: 200 }, voter);
   } catch (error: any) {
     // Unique constraint violation = already voted
@@ -93,18 +99,18 @@ export async function DELETE(
       const { count } = await tx.vote.deleteMany({
         where: { videoId: id, fingerprint: voterKey(voter.voterId) },
       });
-      if (count > 0) {
-        await tx.video.update({
-          where: { id },
-          data: { voteCount: { decrement: count } },
-        });
-      }
-      return count;
+      if (count === 0) return null;
+      return tx.video.update({
+        where: { id },
+        data: { voteCount: { decrement: count } },
+        select: { comparison: { select: { slug: true } }, model: { select: { slug: true } } },
+      });
     });
 
-    if (removed === 0) {
+    if (!removed) {
       return respond({ error: "No vote to remove" }, { status: 404 }, voter);
     }
+    revalidateVotedVideo(removed);
     return respond({ success: true }, { status: 200 }, voter);
   } catch (error) {
     console.error("Unvote error:", error);

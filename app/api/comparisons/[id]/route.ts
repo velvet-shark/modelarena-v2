@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { deleteFiles } from "@/src/lib/storage/r2";
-import { apiComparisonSelect } from "@/lib/data/public";
+import { revalidatePublicData, apiComparisonSelect } from "@/lib/data/public";
 
 // GET /api/comparisons/[id] - Get a single comparison (public)
 export async function GET(
@@ -82,6 +82,7 @@ export async function PATCH(
       },
     });
 
+    revalidatePublicData();
     return NextResponse.json({ comparison });
   } catch (error) {
     console.error("Error updating comparison:", error);
@@ -143,6 +144,7 @@ export async function DELETE(
 
     await deleteFiles(r2Keys);
 
+    revalidatePublicData();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting comparison:", error);

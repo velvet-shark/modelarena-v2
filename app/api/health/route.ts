@@ -23,8 +23,12 @@ export async function GET() {
   }
 
   try {
-    const redis = getConnection();
-    await redis.ping();
+    // The queue connection retries forever while Redis is down, so a bare
+    // ping() would hang the health check instead of failing it
+    await Promise.race([
+      getConnection().ping(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Redis ping timed out")), 2000)),
+    ]);
   } catch (error) {
     console.error("[Health] Redis check failed:", error);
     checks.redis = { status: "error" };

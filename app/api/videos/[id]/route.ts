@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { revalidatePublicData } from "@/lib/data/public";
 import prisma from "@/lib/prisma";
 import { deleteFiles } from "@/src/lib/storage/r2";
 
@@ -93,6 +94,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       data: updateData,
     });
 
+    revalidatePublicData();
     return NextResponse.json({
       success: true,
       video: updatedVideo,
@@ -134,6 +136,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
     await deleteFiles([video.r2Key, video.thumbnailKey]);
 
+    revalidatePublicData();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Video deletion error:", error);

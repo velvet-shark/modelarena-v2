@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { revalidateTag, unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import type { ComparisonCardData } from "@/components/comparison-card";
@@ -6,6 +7,39 @@ import type { ComparisonCardData } from "@/components/comparison-card";
 // Data loaders for public pages. Every query selects only the fields the page
 // renders, so admin/debug columns (apiResponse, r2Key, endpoint, defaultParams,
 // errorMessage) never reach the client.
+//
+// Results go through the Next data cache (so they must stay serializable).
+// Entries expire after a minute, which is how videos the worker finishes show
+// up. Admin changes clear everything at once; a vote clears the comparison
+// and model pages it changed.
+
+const PUBLIC_TAG = "public-data";
+const REVALIDATE_SECONDS = 60;
+const comparisonTag = (slug: string) => `comparison:${slug}`;
+const modelTag = (slug: string) => `model:${slug}`;
+
+export function revalidatePublicData() {
+  revalidateTag(PUBLIC_TAG);
+}
+
+export function revalidateVotedVideo(video: {
+  comparison: { slug: string };
+  model: { slug: string };
+}) {
+  revalidateTag(comparisonTag(video.comparison.slug));
+  revalidateTag(modelTag(video.model.slug));
+}
+
+function cached<Args extends unknown[], Result>(
+  load: (...args: Args) => Promise<Result>,
+  key: string,
+  tags: string[] = []
+) {
+  return unstable_cache(load, [key], {
+    revalidate: REVALIDATE_SECONDS,
+    tags: [PUBLIC_TAG, ...tags],
+  });
+}
 
 export const publicCompletedVideo = {
   status: "COMPLETED",
@@ -105,7 +139,7 @@ export const apiComparisonSelect = {
 // Home
 // ---------------------------------------------------------------------------
 
-export async function getHomeData() {
+export const getHomeData = cached(async () => {
   const [latest, videos, modelCount, comparisonCount, videoCount] = await Promise.all([
     prisma.comparison.findMany({
       where: { isPublic: true },
@@ -149,7 +183,7 @@ export async function getHomeData() {
     comparisonCount,
     videoCount,
   };
-}
+}, "home-data");
 
 // ---------------------------------------------------------------------------
 // Comparisons list
@@ -165,7 +199,8 @@ export interface ComparisonListParams {
   page?: number;
 }
 
-export async function getComparisonList(params: ComparisonListParams) {
+// Arguments are part of the cache key
+export const getComparisonList = cached(async (params: ComparisonListParams) => {
   const where: Prisma.ComparisonWhereInput = { isPublic: true };
   if (params.type) where.type = params.type;
   if (params.tag) where.tags = { some: { slug: params.tag } };
@@ -224,13 +259,17 @@ export async function getComparisonList(params: ComparisonListParams) {
     .map((c) => toCard(c, totals));
 
   return { comparisons, tags, total, page, pageCount, sort };
-}
+}, "comparison-list");
 
 // ---------------------------------------------------------------------------
 // Comparison detail (cache() dedupes generateMetadata + page within a request)
 // ---------------------------------------------------------------------------
 
-export const getPublicComparison = cache(async (slug: string) => {
+export const getPublicComparison = cache((slug: string) =>
+  cached(loadPublicComparison, "public-comparison", [comparisonTag(slug)])(slug)
+);
+
+async function loadPublicComparison(slug: string) {
   const comparison = await prisma.comparison.findFirst({
     where: { slug, isPublic: true },
     select: {
@@ -275,13 +314,17 @@ export const getPublicComparison = cache(async (slug: string) => {
     ...comparison,
     videos: comparison.videos.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() })),
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // Model detail
 // ---------------------------------------------------------------------------
 
-export const getPublicModel = cache(async (slug: string) => {
+export const getPublicModel = cache((slug: string) =>
+  cached(loadPublicModel, "public-model", [modelTag(slug)])(slug)
+);
+
+async function loadPublicModel(slug: string) {
   const model = await prisma.model.findUnique({
     where: { slug },
     select: {
@@ -341,13 +384,13 @@ export const getPublicModel = cache(async (slug: string) => {
     avgDuration: stats._avg.duration,
     avgCost: costStats._avg.cost,
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // Analytics
 // ---------------------------------------------------------------------------
 
-export async function getModelPerformance() {
+export const getModelPerformance = cached(async () => {
   const publicVideo = {
     comparison: { isPublic: true },
     model: { isActive: true },
@@ -396,4 +439,4 @@ export async function getModelPerformance() {
     .filter((d) => d.totalVideos > 0);
 
   return { performanceData, totalModels: models.length };
-}
+}, "model-performance");
