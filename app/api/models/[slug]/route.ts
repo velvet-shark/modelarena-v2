@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, isAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 
@@ -78,11 +78,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/models/[slug] - Update model (admin only)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    // Check authentication
-    const session = await auth();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { error: denied } = await requireAdmin();
+    if (denied) return denied;
 
     const { slug } = await params;
 

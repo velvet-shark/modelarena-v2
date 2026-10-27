@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, isAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadImage } from "@/src/lib/storage/r2";
 import sharp from "sharp";
@@ -10,11 +10,8 @@ const MAX_DIMENSION = 3840; // 4K resolution, safely under the limit
 // POST /api/upload/image - Upload source image for comparisons
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await auth();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { error: denied } = await requireAdmin();
+    if (denied) return denied;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;

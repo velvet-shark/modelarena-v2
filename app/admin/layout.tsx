@@ -1,18 +1,10 @@
-import { redirect } from "next/navigation";
-import { auth, isAdmin } from "@/lib/auth";
+import { requireAdminPage } from "@/lib/auth";
 import Link from "next/link";
 import { AdminMobileNav } from "@/components/admin-mobile-nav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-
-  if (!session?.user?.email) {
-    redirect("/auth/signin");
-  }
-
-  if (!isAdmin(session.user.email)) {
-    redirect("/");
-  }
+  // Pages that read data also call requireAdminPage(); this guards the nav chrome
+  const session = await requireAdminPage();
 
   const navLinks = [
     { href: "/admin/generate", label: "Generate" },

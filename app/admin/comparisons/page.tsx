@@ -2,11 +2,14 @@ import prisma from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { ComparisonsListBulk } from "@/components/comparisons-list-bulk";
 import Link from "next/link";
+import { requireAdminPage } from "@/lib/auth";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
 
 export default async function ComparisonsPage() {
+  await requireAdminPage();
+
   const comparisons = await prisma.comparison.findMany({
     include: {
       sourceImage: true,

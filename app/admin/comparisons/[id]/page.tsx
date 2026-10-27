@@ -7,6 +7,7 @@ import { VideoCostEditor } from "@/components/video-cost-editor";
 import { ComparisonEditForm } from "@/components/comparison-edit-form";
 import { AddModelsForm } from "@/components/add-models-form";
 import Link from "next/link";
+import { requireAdminPage } from "@/lib/auth";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ interface ComparisonPageProps {
 }
 
 export default async function ComparisonPage({ params }: ComparisonPageProps) {
+  await requireAdminPage();
   const { id } = await params;
 
   const [comparison, allTags, allModels] = await Promise.all([

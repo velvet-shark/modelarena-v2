@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { uploadVideo, uploadThumbnail } from "@/lib/storage/r2";
 import { writeFile, unlink } from "fs/promises";
@@ -7,15 +7,8 @@ import { join } from "path";
 import { tmpdir } from "os";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
-  if (!adminEmails.includes(session.user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { error: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const formData = await req.formData();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { deleteFile } from "@/lib/storage/r2";
 
@@ -12,15 +12,8 @@ interface RouteContext {
  * Update video metadata (admin only)
  */
 export async function PATCH(req: NextRequest, context: RouteContext) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
-  if (!adminEmails.includes(session.user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { error: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const { id } = await context.params;
@@ -118,15 +111,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
  * Delete a video and its R2 files (admin only)
  */
 export async function DELETE(req: NextRequest, context: RouteContext) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
-  if (!adminEmails.includes(session.user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { error: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const { id } = await context.params;

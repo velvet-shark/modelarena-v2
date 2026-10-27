@@ -1,10 +1,13 @@
 import prisma from "@/lib/prisma";
 import { GenerateForm } from "@/components/generate-form";
+import { requireAdminPage } from "@/lib/auth";
 
 // Force dynamic rendering - requires database connection
 export const dynamic = "force-dynamic";
 
 export default async function GeneratePage() {
+  await requireAdminPage();
+
   // Fetch all active models grouped by provider
   const models = await prisma.model.findMany({
     where: { isActive: true },

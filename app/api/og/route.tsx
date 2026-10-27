@@ -10,14 +10,14 @@ export async function GET(request: NextRequest) {
 
   // Model OG image
   if (type === "model" && slug) {
-    const model = await prisma.model.findUnique({
-      where: { slug },
+    const model = await prisma.model.findFirst({
+      where: { slug, isActive: true },
       include: {
         provider: true,
         capabilities: true,
         _count: {
           select: {
-            videos: { where: { status: "COMPLETED" } },
+            videos: { where: { status: "COMPLETED", comparison: { isPublic: true } } },
           },
         },
       },
@@ -170,15 +170,16 @@ export async function GET(request: NextRequest) {
 
   // Comparison OG image
   if (type === "comparison" && slug) {
-    const comparison = await prisma.comparison.findUnique({
-      where: { slug },
+    const comparison = await prisma.comparison.findFirst({
+      where: { slug, isPublic: true },
       include: {
         sourceImage: true,
         videos: {
           where: { status: "COMPLETED" },
           select: { id: true, thumbnailUrl: true },
-          take: 4,
+          take: 1,
         },
+        _count: { select: { videos: { where: { status: "COMPLETED" } } } },
       },
     });
 
@@ -268,7 +269,7 @@ export async function GET(request: NextRequest) {
                     fontSize: "18px",
                   }}
                 >
-                  {comparison.videos.length} models
+                  {comparison._count.videos} {comparison._count.videos === 1 ? "model" : "models"}
                 </div>
               </div>
 
@@ -427,7 +428,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("OG Image generation error:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to generate image", details: String(error) }),
+      JSON.stringify({ error: "Failed to generate image" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

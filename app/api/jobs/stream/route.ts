@@ -1,16 +1,12 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  // Check admin auth
-  const session = await auth();
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || [];
-  if (!session?.user?.email || !adminEmails.includes(session.user.email)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const { error: denied } = await requireAdmin();
+  if (denied) return denied;
 
   const encoder = new TextEncoder();
 

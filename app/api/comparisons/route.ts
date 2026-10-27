@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getGenerationQueue } from "@/src/lib/queue";
 import { z } from "zod";
@@ -21,10 +20,15 @@ const createComparisonSchema = z.object({
   additionalParams: z.record(z.unknown()).optional(),
 });
 
-// GET /api/comparisons - List all comparisons
+// GET /api/comparisons - List comparisons (?public=true for public ones, otherwise admin only)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const isPublic = searchParams.get("public") === "true";
+
+  if (!isPublic) {
+    const { error: denied } = await requireAdmin();
+    if (denied) return denied;
+  }
 
   const comparisons = await prisma.comparison.findMany({
     where: isPublic ? { isPublic: true } : {},
@@ -52,11 +56,8 @@ export async function GET(request: NextRequest) {
 // POST /api/comparisons - Create new comparison
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await auth();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { error: denied } = await requireAdmin();
+    if (denied) return denied;
 
     // Parse and validate request body
     const body = await request.json();
