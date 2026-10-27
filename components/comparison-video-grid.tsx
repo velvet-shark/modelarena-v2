@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useHoverPlay } from "@/hooks/use-hover-play";
 import Link from "next/link";
 import {
   Play,
@@ -84,9 +85,8 @@ function VideoCard({
   videoRef: (el: HTMLVideoElement | null) => void;
   globalIsPlaying: boolean;
 }) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef: localVideoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay(globalIsPlaying);
 
   const isVertical = isVerticalVideo(video);
   const aspectRatio =
@@ -96,29 +96,6 @@ function VideoCard({
       ? 9 / 16
       : 16 / 9;
 
-  // Handle hover-based play/pause
-  useEffect(() => {
-    if (!globalIsPlaying) {
-      if (isHovering && localVideoRef.current) {
-        localVideoRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      } else if (localVideoRef.current) {
-        localVideoRef.current.pause();
-        localVideoRef.current.currentTime = 0;
-        setIsPlaying(false);
-      }
-    }
-  }, [isHovering, globalIsPlaying]);
-
-  // Handle global play all state
-  useEffect(() => {
-    if (globalIsPlaying && localVideoRef.current) {
-      setIsPlaying(true);
-    } else if (!globalIsPlaying && !isHovering && localVideoRef.current) {
-      setIsPlaying(false);
-    }
-  }, [globalIsPlaying, isHovering]);
-
   return (
     <div className="masonry-item">
       <div className="group rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow">
@@ -126,8 +103,7 @@ function VideoCard({
         <div
           className="relative cursor-pointer bg-black"
           style={{ aspectRatio }}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
+          {...hoverProps}
           onClick={onFullscreen}
         >
           {/* Thumbnail */}
@@ -154,6 +130,7 @@ function VideoCard({
               muted
               loop
               playsInline
+              onPlaying={onPlaying}
               preload="metadata"
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 isPlaying ? "opacity-100" : "opacity-0"
@@ -244,7 +221,6 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [copied, setCopied] = useState(false);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-  const modalVideoRef = useRef<HTMLVideoElement>(null);
 
   // Check for video hash on mount and open modal if found
   useEffect(() => {
@@ -562,7 +538,6 @@ export function ComparisonVideoGrid({ videos }: ComparisonVideoGridProps) {
                   }`}
                 >
                   <video
-                    ref={modalVideoRef}
                     src={selectedVideo.url || ""}
                     poster={selectedVideo.thumbnailUrl || undefined}
                     controls
@@ -631,9 +606,8 @@ function VideoCardContent({
   videoRef: (el: HTMLVideoElement | null) => void;
   globalIsPlaying: boolean;
 }) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef: localVideoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay(globalIsPlaying);
 
   const isVertical = isVerticalVideo(video);
   const aspectRatio =
@@ -643,37 +617,13 @@ function VideoCardContent({
       ? 9 / 16
       : 16 / 9;
 
-  // Handle hover-based play/pause
-  useEffect(() => {
-    if (!globalIsPlaying) {
-      if (isHovering && localVideoRef.current) {
-        localVideoRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      } else if (localVideoRef.current) {
-        localVideoRef.current.pause();
-        localVideoRef.current.currentTime = 0;
-        setIsPlaying(false);
-      }
-    }
-  }, [isHovering, globalIsPlaying]);
-
-  // Handle global play all state
-  useEffect(() => {
-    if (globalIsPlaying && localVideoRef.current) {
-      setIsPlaying(true);
-    } else if (!globalIsPlaying && !isHovering && localVideoRef.current) {
-      setIsPlaying(false);
-    }
-  }, [globalIsPlaying, isHovering]);
-
   return (
     <>
       {/* Video container */}
       <div
         className="relative cursor-pointer bg-black"
         style={{ aspectRatio }}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
+        {...hoverProps}
         onClick={onFullscreen}
       >
         {/* Thumbnail */}
@@ -700,6 +650,7 @@ function VideoCardContent({
             muted
             loop
             playsInline
+            onPlaying={onPlaying}
             preload="metadata"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-100" : "opacity-0"

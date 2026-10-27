@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useHoverPlay } from "@/hooks/use-hover-play";
 import Link from "next/link";
 
 interface Video {
@@ -25,9 +25,8 @@ interface HomeMasonryGalleryProps {
 }
 
 function VideoCard({ video }: { video: Video }) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay();
 
   // Calculate aspect ratio for the card
   const isVertical = video.height && video.width ? video.height > video.width : false;
@@ -38,23 +37,11 @@ function VideoCard({ video }: { video: Video }) {
       ? 9 / 16
       : 16 / 9;
 
-  useEffect(() => {
-    if (isHovering && videoRef.current) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [isHovering]);
-
   return (
     <Link
       href={`/comparisons/${video.comparison.slug}`}
       className="group block masonry-item"
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      {...hoverProps}
     >
       <div
         className="relative overflow-hidden rounded-xl bg-muted"
@@ -81,6 +68,7 @@ function VideoCard({ video }: { video: Video }) {
             muted
             loop
             playsInline
+            onPlaying={onPlaying}
             preload="none"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-100" : "opacity-0"

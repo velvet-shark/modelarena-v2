@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useHoverPlay } from "@/hooks/use-hover-play";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 
@@ -36,9 +36,8 @@ interface ComparisonCardProps {
 }
 
 export function ComparisonCard({ comparison }: ComparisonCardProps) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay();
 
   const { previewVideo, modelCount: completedCount } = comparison;
 
@@ -54,17 +53,6 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
       ? 9 / 16
       : 16 / 9;
 
-  useEffect(() => {
-    if (isHovering && videoRef.current && previewVideo?.url) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [isHovering, previewVideo?.url]);
-
   const thumbnailUrl =
     previewVideo?.thumbnailUrl || comparison.sourceImage?.url;
 
@@ -73,8 +61,7 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
       <Link
         href={`/comparisons/${comparison.slug}`}
         className="group block rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow"
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
+        {...hoverProps}
       >
         {/* Media Container */}
         <div
@@ -102,6 +89,7 @@ export function ComparisonCard({ comparison }: ComparisonCardProps) {
               muted
               loop
               playsInline
+              onPlaying={onPlaying}
               preload="none"
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 isPlaying ? "opacity-100" : "opacity-0"

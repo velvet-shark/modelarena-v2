@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState } from "react";
+import { useHoverPlay } from "@/hooks/use-hover-play";
 import Link from "next/link";
 import { Play, X } from "lucide-react";
 import { VoteButton } from "@/components/vote-button";
@@ -50,9 +51,8 @@ function VideoCard({
   video: Video;
   onFullscreen: () => void;
 }) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay();
 
   const isVertical = isVerticalVideo(video);
   const aspectRatio =
@@ -62,17 +62,6 @@ function VideoCard({
       ? 9 / 16
       : 16 / 9;
 
-  useEffect(() => {
-    if (isHovering && videoRef.current) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [isHovering]);
-
   return (
     <div className="masonry-item">
       <div className="group rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow">
@@ -80,8 +69,7 @@ function VideoCard({
         <div
           className="relative cursor-pointer bg-black"
           style={{ aspectRatio }}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
+          {...hoverProps}
           onClick={onFullscreen}
         >
           {/* Thumbnail */}
@@ -105,6 +93,7 @@ function VideoCard({
               muted
               loop
               playsInline
+              onPlaying={onPlaying}
               preload="none"
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 isPlaying ? "opacity-100" : "opacity-0"
@@ -300,9 +289,8 @@ function VideoCardGrid({
   video: Video;
   onFullscreen: () => void;
 }) {
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, isHovering, showVideo: isPlaying, hoverProps, onPlaying } =
+    useHoverPlay();
 
   const isVertical = isVerticalVideo(video);
   const aspectRatio =
@@ -312,24 +300,12 @@ function VideoCardGrid({
       ? 9 / 16
       : 16 / 9;
 
-  useEffect(() => {
-    if (isHovering && videoRef.current) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [isHovering]);
-
   return (
     <div className="group rounded-xl overflow-hidden bg-card border hover:shadow-lg transition-shadow">
       <div
         className="relative cursor-pointer bg-black"
         style={{ aspectRatio }}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
+        {...hoverProps}
         onClick={onFullscreen}
       >
         {video.thumbnailUrl && (
@@ -351,6 +327,7 @@ function VideoCardGrid({
             muted
             loop
             playsInline
+            onPlaying={onPlaying}
             preload="none"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               isPlaying ? "opacity-100" : "opacity-0"
